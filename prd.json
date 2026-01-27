@@ -36,10 +36,11 @@
         "make test passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "US-001"
-      ]
+      ],
+      "completionNotes": "Completed by agent - added /data volume, config package, docs, UI Settings page"
     },
     {
       "id": "US-003",
@@ -499,6 +500,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-01-27T15:17:36.404Z"
+    "updatedAt": "2026-01-27T15:17:37.458Z"
   }
 }

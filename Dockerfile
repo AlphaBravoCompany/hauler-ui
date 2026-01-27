@@ -19,6 +19,14 @@ FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates
 
+# Create /data directory for persistent storage
+# This directory should be mounted as a volume for:
+# - HAULER_STORE_DIR (default: /data/store)
+# - HAULER_TEMP_DIR (default: /data/tmp)
+# - Docker auth config (default: /data/.docker/config.json)
+RUN mkdir -p /data/store /data/tmp /data/.docker && \
+    chmod 755 /data /data/store /data/tmp /data/.docker
+
 WORKDIR /app
 
 # Copy built backend
@@ -30,5 +38,16 @@ COPY --from=web-builder /web/dist /app/web
 EXPOSE 8080
 
 ENV PORT=8080
+
+# Hauler directory configuration
+ENV HAULER_DIR=/data
+ENV HAULER_STORE_DIR=/data/store
+ENV HAULER_TEMP_DIR=/data/tmp
+
+# Docker config location for registry credentials
+ENV HOME=/data
+ENV DOCKER_CONFIG=/data/.docker
+
+VOLUME ["/data"]
 
 CMD ["/app/server"]

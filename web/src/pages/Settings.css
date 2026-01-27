@@ -1,0 +1,100 @@
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.settings-page h1 {
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.settings-page .subtitle {
+  color: #6b7280;
+  margin-bottom: 2rem;
+}
+
+.settings-page.loading,
+.settings-page.error {
+  padding: 1rem;
+  text-align: center;
+}
+
+.settings-page.error {
+  color: #dc2626;
+}
+
+.settings-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.settings-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-item label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.setting-value {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.env-var {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.info-text {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.info-text code {
+  background: #e5e7eb;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+.code-example {
+  background: #1f2937;
+  color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-top: 1rem;
+}

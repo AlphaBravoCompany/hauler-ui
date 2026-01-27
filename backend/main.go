@@ -5,12 +5,17 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/hauler-ui/hauler-ui/backend/internal/config"
 )
 
 func main() {
+	cfg := config.Load()
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
+	mux.HandleFunc("/api/config", configHandler(cfg))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -41,4 +46,12 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"status": "ok",
 	})
+}
+
+func configHandler(cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(cfg.ToMap())
+	}
 }
