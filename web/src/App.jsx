@@ -6,6 +6,7 @@ import StoreAddFile from './pages/StoreAddFile.jsx'
 import StoreSync from './pages/StoreSync.jsx'
 import StoreSave from './pages/StoreSave.jsx'
 import StoreLoad from './pages/StoreLoad.jsx'
+import StoreExtract from './pages/StoreExtract.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -857,6 +858,7 @@ function JobDetail() {
       {job.status === 'succeeded' && job.result && (() => {
         try {
           const result = JSON.parse(job.result)
+          // Store save job result
           if (result.archivePath && result.filename) {
             return (
               <div className="card" style={{ borderColor: 'var(--accent-green)' }}>
@@ -874,6 +876,21 @@ function JobDetail() {
                   >
                     Download {result.filename}
                   </a>
+                </div>
+              </div>
+            )
+          }
+          // Store extract job result
+          if (result.outputDir) {
+            return (
+              <div className="card" style={{ borderColor: 'var(--accent-green)' }}>
+                <div className="card-title" style={{ color: 'var(--accent-green)' }}>
+                  Extraction Complete
+                </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                  <p style={{ marginBottom: '0.5rem' }}>
+                    <strong>Output directory:</strong> <code>{result.outputDir}</code>
+                  </p>
                 </div>
               </div>
             )
@@ -943,6 +960,7 @@ function App() {
                 <Route path="/store/sync/:manifestId" element={<StoreSync />} />
                 <Route path="/store/save" element={<StoreSave />} />
                 <Route path="/store/load" element={<StoreLoad />} />
+                <Route path="/store/extract" element={<StoreExtract />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />

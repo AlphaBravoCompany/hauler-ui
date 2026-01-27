@@ -683,9 +683,102 @@ func (h *Handler) ServeDownload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ExtractRequest represents the request to extract an artifact from the store
+type ExtractRequest struct {
+	ArtifactRef string `json:"artifactRef"`
+	OutputDir   string `json:"outputDir,omitempty"`
+}
+
 // LoadRequest represents the request to load archives into the store
 type LoadRequest struct {
 	Filenames []string `json:"filenames,omitempty"`
+}
+
+// Extract handles POST /api/store/extract
+func (h *Handler) Extract(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ExtractRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.ArtifactRef == "" {
+		http.Error(w, "artifactRef is required", http.StatusBadRequest)
+		return
+	}
+
+	// Build args for hauler store extract command
+	args := []string{"store", "extract", req.ArtifactRef}
+
+	// Optional output directory
+	if req.OutputDir != "" {
+		args = append(args, "--output", req.OutputDir)
+	}
+
+	// Create a job for the extract operation
+	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating extract job: %v", err)
+		http.Error(w, "Failed to create extract job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background with result tracking
+	go h.runExtractJob(r.Context(), job.ID, req.OutputDir)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":       job.ID,
+		"message":     "Extract job started",
+		"artifactRef": req.ArtifactRef,
+		"outputDir":   req.OutputDir,
+	})
+}
+
+// runExtractJob starts an extract job and updates the result with output directory on success
+func (h *Handler) runExtractJob(ctx context.Context, jobID int64, outputDir string) {
+	if err := h.jobRunner.Start(ctx, jobID); err != nil {
+		log.Printf("Error starting extract job %d: %v", jobID, err)
+		return
+	}
+
+	// Wait for job completion and update result
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			job, err := h.jobRunner.GetJob(ctx, jobID)
+			if err != nil {
+				return
+			}
+
+			if job.Status == jobrunner.StatusSucceeded {
+				// If outputDir wasn't specified, try to determine it from the job output
+				resultOutputDir := outputDir
+				if resultOutputDir == "" {
+					resultOutputDir = "." // Default to current directory
+				}
+
+				result := map[string]interface{}{
+					"outputDir": resultOutputDir,
+				}
+				resultJSON, _ := json.Marshal(result)
+				_ = h.jobRunner.UpdateResult(ctx, jobID, string(resultJSON))
+				return
+			}
+
+			if job.Status == jobrunner.StatusFailed {
+				return
+			}
+		}
+	}()
 }
 
 // Load handles POST /api/store/load
@@ -746,5 +839,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/sync", h.Sync)
 	mux.HandleFunc("/api/store/save", h.Save)
 	mux.HandleFunc("/api/store/load", h.Load)
+	mux.HandleFunc("/api/store/extract", h.Extract)
 	mux.HandleFunc("/api/downloads/", h.ServeDownload)
 }
