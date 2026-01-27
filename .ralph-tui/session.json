@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T15:20:55.690Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-01-27T15:25:16.660Z",
+  "currentIteration": 2,
   "maxIterations": 150,
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -23,8 +23,8 @@
       {
         "id": "US-002",
         "title": "Container persistence model for Hauler dirs",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-003",
@@ -170,6 +170,16 @@
       "durationMs": 74492,
       "startedAt": "2026-01-27T15:16:21.899Z",
       "endedAt": "2026-01-27T15:17:36.391Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-002",
+      "taskTitle": "Container persistence model for Hauler dirs",
+      "taskCompleted": true,
+      "durationMs": 198229,
+      "startedAt": "2026-01-27T15:17:37.457Z",
+      "endedAt": "2026-01-27T15:20:55.686Z"
     }
   ],
   "skippedTaskIds": [],
