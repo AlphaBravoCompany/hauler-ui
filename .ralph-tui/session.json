@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T17:34:44.402Z",
-  "currentIteration": 11,
+  "updatedAt": "2026-01-27T17:44:19.905Z",
+  "currentIteration": 12,
   "maxIterations": 150,
-  "tasksCompleted": 11,
+  "tasksCompleted": 12,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -83,8 +83,8 @@
       {
         "id": "US-012",
         "title": "Manifest library CRUD (YAML editor + saved manifests)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-013",
@@ -270,6 +270,16 @@
       "durationMs": 332184,
       "startedAt": "2026-01-27T17:21:28.069Z",
       "endedAt": "2026-01-27T17:27:00.253Z"
+    },
+    {
+      "iteration": 12,
+      "status": "completed",
+      "taskId": "US-012",
+      "taskTitle": "Manifest library CRUD (YAML editor + saved manifests)",
+      "taskCompleted": true,
+      "durationMs": 463041,
+      "startedAt": "2026-01-27T17:27:01.355Z",
+      "endedAt": "2026-01-27T17:34:44.396Z"
     }
   ],
   "skippedTaskIds": [],
