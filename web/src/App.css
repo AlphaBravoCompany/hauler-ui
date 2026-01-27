@@ -432,6 +432,22 @@
   border-color: var(--accent-amber);
 }
 
+.form-input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+/* === Help Panel === */
+.help-panel {
+  position: sticky;
+  top: 5rem;
+}
+
+.help-panel code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
 /* === Loading State === */
 .loading {
   display: flex;

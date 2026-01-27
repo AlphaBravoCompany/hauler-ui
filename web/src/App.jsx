@@ -1,11 +1,12 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { HashRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import StoreAddImage from './pages/StoreAddImage.jsx'
 import './App.css'
 
 // === Context for Jobs ===
 const JobsContext = createContext()
 
-function useJobs() {
+export function useJobs() {
   const context = useContext(JobsContext)
   if (!context) {
     throw new Error('useJobs must be used within JobsProvider')
@@ -914,6 +915,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/store" element={<Store />} />
+                <Route path="/store/add" element={<StoreAddImage />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />

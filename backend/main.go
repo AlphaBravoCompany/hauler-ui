@@ -12,6 +12,7 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
 	"github.com/hauler-ui/hauler-ui/backend/internal/registry"
 	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
+	"github.com/hauler-ui/hauler-ui/backend/internal/store"
 )
 
 func main() {
@@ -37,6 +38,9 @@ func main() {
 	// Initialize registry handler
 	registryHandler := registry.NewHandler(jobRunner, cfg)
 
+	// Initialize store handler
+	storeHandler := store.NewHandler(jobRunner, cfg)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
@@ -47,6 +51,9 @@ func main() {
 
 	// Registry endpoints
 	registryHandler.RegisterRoutes(mux)
+
+	// Store endpoints
+	storeHandler.RegisterRoutes(mux)
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {
