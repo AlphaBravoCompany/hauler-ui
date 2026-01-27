@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
+  "sessionId": "9cbbcb6d-129a-470f-8465-d4a66cf7760f",
   "status": "running",
-  "startedAt": "2026-01-27T18:52:38.600Z",
-  "updatedAt": "2026-01-27T19:39:35.441Z",
-  "currentIteration": 6,
+  "startedAt": "2026-01-27T20:04:57.108Z",
+  "updatedAt": "2026-01-27T20:11:07.424Z",
+  "currentIteration": 0,
   "maxIterations": 150,
-  "tasksCompleted": 6,
+  "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -96,42 +96,42 @@
         "id": "US-014",
         "title": "Store Save workflow (hauler store save --filename ...)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-015",
         "title": "Store Load workflow (hauler store load --filename ...)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-016",
         "title": "Store Extract workflow (hauler store extract <artifact> --output ...)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-017",
         "title": "Store Copy workflow (registry:// and dir:// targets)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-018",
         "title": "Serve Registry control plane (start/stop/status)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-019",
         "title": "Serve Fileserver control plane (start/stop/status)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-020",
         "title": "Store Remove workflow (experimental)",
-        "status": "open",
+        "status": "completed",
         "completedInSession": false
       },
       {
@@ -160,68 +160,7 @@
       }
     ]
   },
-  "iterations": [
-    {
-      "iteration": 1,
-      "status": "completed",
-      "taskId": "US-014",
-      "taskTitle": "Store Save workflow (hauler store save --filename ...)",
-      "taskCompleted": true,
-      "durationMs": 377832,
-      "startedAt": "2026-01-27T18:52:40.879Z",
-      "endedAt": "2026-01-27T18:58:58.711Z"
-    },
-    {
-      "iteration": 2,
-      "status": "completed",
-      "taskId": "US-015",
-      "taskTitle": "Store Load workflow (hauler store load --filename ...)",
-      "taskCompleted": true,
-      "durationMs": 335591,
-      "startedAt": "2026-01-27T18:58:59.800Z",
-      "endedAt": "2026-01-27T19:04:35.391Z"
-    },
-    {
-      "iteration": 3,
-      "status": "completed",
-      "taskId": "US-016",
-      "taskTitle": "Store Extract workflow (hauler store extract <artifact> --output ...)",
-      "taskCompleted": true,
-      "durationMs": 429259,
-      "startedAt": "2026-01-27T19:04:36.524Z",
-      "endedAt": "2026-01-27T19:11:45.783Z"
-    },
-    {
-      "iteration": 4,
-      "status": "completed",
-      "taskId": "US-017",
-      "taskTitle": "Store Copy workflow (registry:// and dir:// targets)",
-      "taskCompleted": true,
-      "durationMs": 468536,
-      "startedAt": "2026-01-27T19:11:46.852Z",
-      "endedAt": "2026-01-27T19:19:35.388Z"
-    },
-    {
-      "iteration": 5,
-      "status": "completed",
-      "taskId": "US-018",
-      "taskTitle": "Serve Registry control plane (start/stop/status)",
-      "taskCompleted": true,
-      "durationMs": 478880,
-      "startedAt": "2026-01-27T19:19:36.517Z",
-      "endedAt": "2026-01-27T19:27:35.397Z"
-    },
-    {
-      "iteration": 6,
-      "status": "completed",
-      "taskId": "US-019",
-      "taskTitle": "Serve Fileserver control plane (start/stop/status)",
-      "taskCompleted": true,
-      "durationMs": 431760,
-      "startedAt": "2026-01-27T19:27:36.553Z",
-      "endedAt": "2026-01-27T19:34:48.313Z"
-    }
-  ],
+  "iterations": [],
   "skippedTaskIds": [],
   "cwd": "/home/roughneck/projects/hauler-ui",
   "activeTaskIds": [],
