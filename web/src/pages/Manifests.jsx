@@ -517,6 +517,14 @@ function Manifests() {
                     >
                       ⬇
                     </button>
+                    <NavLink
+                      to={`/store/sync/${manifest.id}`}
+                      className="btn btn-sm"
+                      title="Use this manifest for sync"
+                      style={{ color: 'var(--accent-green)' }}
+                    >
+                      🔄
+                    </NavLink>
                     <button
                       className="btn btn-sm"
                       onClick={() => handleEdit(manifest)}

@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, NavLink, useNavigate, useLocation 
 import StoreAddImage from './pages/StoreAddImage.jsx'
 import StoreAddChart from './pages/StoreAddChart.jsx'
 import StoreAddFile from './pages/StoreAddFile.jsx'
+import StoreSync from './pages/StoreSync.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -905,6 +906,8 @@ function App() {
                 <Route path="/store/add" element={<StoreAddImage />} />
                 <Route path="/store/add-chart" element={<StoreAddChart />} />
                 <Route path="/store/add-file" element={<StoreAddFile />} />
+                <Route path="/store/sync" element={<StoreSync />} />
+                <Route path="/store/sync/:manifestId" element={<StoreSync />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />
