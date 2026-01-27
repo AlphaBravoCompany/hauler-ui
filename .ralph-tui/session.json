@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T17:21:27.006Z",
-  "currentIteration": 9,
+  "updatedAt": "2026-01-27T17:27:00.260Z",
+  "currentIteration": 10,
   "maxIterations": 150,
-  "tasksCompleted": 9,
+  "tasksCompleted": 10,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -71,8 +71,8 @@
       {
         "id": "US-010",
         "title": "Store Add Chart workflow (hauler store add chart)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-011",
@@ -250,6 +250,16 @@
       "durationMs": 453956,
       "startedAt": "2026-01-27T17:09:11.005Z",
       "endedAt": "2026-01-27T17:16:44.961Z"
+    },
+    {
+      "iteration": 10,
+      "status": "completed",
+      "taskId": "US-010",
+      "taskTitle": "Store Add Chart workflow (hauler store add chart)",
+      "taskCompleted": true,
+      "durationMs": 280917,
+      "startedAt": "2026-01-27T17:16:46.082Z",
+      "endedAt": "2026-01-27T17:21:26.999Z"
     }
   ],
   "skippedTaskIds": [],
