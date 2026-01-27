@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, NavLink, useNavigate, useLocation 
 import StoreAddImage from './pages/StoreAddImage.jsx'
 import StoreAddChart from './pages/StoreAddChart.jsx'
 import StoreAddFile from './pages/StoreAddFile.jsx'
+import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
 // === Context for Jobs ===
@@ -377,24 +378,6 @@ function Store() {
             temporary space. Ensure <code>{config?.haulerTempDir || '/data/tmp'}</code> has adequate disk space.
           </p>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function Manifests() {
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Manifests</h1>
-          <p className="page-subtitle">Create and manage hauler manifests</p>
-        </div>
-        <button className="btn btn-primary">+ New Manifest</button>
-      </div>
-      <div className="empty-state">
-        <div className="empty-state-icon">📋</div>
-        <div className="empty-state-text">Manifest management coming soon</div>
       </div>
     </div>
   )
