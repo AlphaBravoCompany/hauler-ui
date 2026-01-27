@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/hauler-ui/hauler-ui/backend/internal/config"
+	"github.com/hauler-ui/hauler-ui/backend/internal/hauler"
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
 	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
 )
@@ -22,14 +24,22 @@ func main() {
 	defer db.Close()
 	log.Printf("Database initialized: %s", cfg.DatabasePath)
 
-	// Initialize job runner
+		// Initialize job runner
 	jobRunner := jobrunner.New(db.DB)
 	jobHandler := jobrunner.NewHandler(jobRunner, cfg)
+
+	// Initialize hauler detector
+	haulerBinary := getEnv("HAULER_BINARY", "hauler")
+	haulerDetector := hauler.New(haulerBinary)
+	haulerHandler := hauler.NewHandler(haulerDetector)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/api/config", configHandler(cfg))
+
+	// Hauler capabilities endpoints
+	haulerHandler.RegisterRoutes(mux)
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {
@@ -103,4 +113,11 @@ func configHandler(cfg *config.Config) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(cfg.ToMap())
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
