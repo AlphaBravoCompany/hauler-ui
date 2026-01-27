@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T15:30:53.533Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-01-27T15:37:03.075Z",
+  "currentIteration": 4,
   "maxIterations": 150,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -35,8 +35,8 @@
       {
         "id": "US-004",
         "title": "Job runner that executes hauler CLI and streams logs",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-005",
@@ -190,10 +190,20 @@
       "durationMs": 259929,
       "startedAt": "2026-01-27T15:20:56.727Z",
       "endedAt": "2026-01-27T15:25:16.656Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "US-004",
+      "taskTitle": "Job runner that executes hauler CLI and streams logs",
+      "taskCompleted": true,
+      "durationMs": 335827,
+      "startedAt": "2026-01-27T15:25:17.702Z",
+      "endedAt": "2026-01-27T15:30:53.529Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/home/roughneck/projects/hauler-ui",
   "activeTaskIds": [],
-  "subagentPanelVisible": false
+  "subagentPanelVisible": true
 }
