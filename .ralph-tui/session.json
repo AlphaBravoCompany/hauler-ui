@@ -3,10 +3,10 @@
   "sessionId": "9cbbcb6d-129a-470f-8465-d4a66cf7760f",
   "status": "running",
   "startedAt": "2026-01-27T20:04:57.108Z",
-  "updatedAt": "2026-01-27T20:14:10.681Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-01-27T20:22:26.550Z",
+  "currentIteration": 2,
   "maxIterations": 150,
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -143,8 +143,8 @@
       {
         "id": "US-022",
         "title": "UX polish: beginner wizards for common flows",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-023",
@@ -170,6 +170,16 @@
       "durationMs": 369585,
       "startedAt": "2026-01-27T20:04:57.830Z",
       "endedAt": "2026-01-27T20:11:07.415Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-022",
+      "taskTitle": "UX polish: beginner wizards for common flows",
+      "taskCompleted": true,
+      "durationMs": 182159,
+      "startedAt": "2026-01-27T20:11:08.519Z",
+      "endedAt": "2026-01-27T20:14:10.678Z"
     }
   ],
   "skippedTaskIds": [],
