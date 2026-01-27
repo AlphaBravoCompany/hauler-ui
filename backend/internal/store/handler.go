@@ -683,6 +683,61 @@ func (h *Handler) ServeDownload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// LoadRequest represents the request to load archives into the store
+type LoadRequest struct {
+	Filenames []string `json:"filenames,omitempty"`
+}
+
+// Load handles POST /api/store/load
+func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Build args for hauler store load command
+	args := []string{"store", "load"}
+
+	// Add each file with -f flag
+	if len(req.Filenames) > 0 {
+		for _, f := range req.Filenames {
+			args = append(args, "-f", f)
+		}
+	} else {
+		// Default to haul.tar.zst as per acceptance criteria
+		args = append(args, "-f", "haul.tar.zst")
+	}
+
+	// Create a job for the load operation
+	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating load job: %v", err)
+		http.Error(w, "Failed to create load job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background
+	go func() {
+		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+			log.Printf("Error starting load job %d: %v", job.ID, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":     job.ID,
+		"message":   "Load job started",
+		"filenames": req.Filenames,
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
@@ -690,5 +745,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-file", h.AddFile)
 	mux.HandleFunc("/api/store/sync", h.Sync)
 	mux.HandleFunc("/api/store/save", h.Save)
+	mux.HandleFunc("/api/store/load", h.Load)
 	mux.HandleFunc("/api/downloads/", h.ServeDownload)
 }

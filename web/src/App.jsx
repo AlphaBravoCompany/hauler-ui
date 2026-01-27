@@ -5,6 +5,7 @@ import StoreAddChart from './pages/StoreAddChart.jsx'
 import StoreAddFile from './pages/StoreAddFile.jsx'
 import StoreSync from './pages/StoreSync.jsx'
 import StoreSave from './pages/StoreSave.jsx'
+import StoreLoad from './pages/StoreLoad.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -941,6 +942,7 @@ function App() {
                 <Route path="/store/sync" element={<StoreSync />} />
                 <Route path="/store/sync/:manifestId" element={<StoreSync />} />
                 <Route path="/store/save" element={<StoreSave />} />
+                <Route path="/store/load" element={<StoreLoad />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />
