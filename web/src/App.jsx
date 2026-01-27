@@ -8,6 +8,7 @@ import StoreSave from './pages/StoreSave.jsx'
 import StoreLoad from './pages/StoreLoad.jsx'
 import StoreExtract from './pages/StoreExtract.jsx'
 import StoreCopy from './pages/StoreCopy.jsx'
+import StoreRemove from './pages/StoreRemove.jsx'
 import ServeRegistry from './pages/ServeRegistry.jsx'
 import ServeFileserver from './pages/ServeFileserver.jsx'
 import Manifests from './pages/Manifests.jsx'
@@ -1002,6 +1003,7 @@ function App() {
                 <Route path="/store/load" element={<StoreLoad />} />
                 <Route path="/store/extract" element={<StoreExtract />} />
                 <Route path="/store/copy" element={<StoreCopy />} />
+                <Route path="/store/remove" element={<StoreRemove />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />

@@ -839,6 +839,12 @@ type CopyRequest struct {
 	Only      string `json:"only,omitempty"`
 }
 
+// RemoveRequest represents the request to remove artifacts from the store
+type RemoveRequest struct {
+	Match string `json:"match"`
+	Force bool   `json:"force"`
+}
+
 // Copy handles POST /api/store/copy
 func (h *Handler) Copy(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -905,6 +911,57 @@ func (h *Handler) Copy(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Remove handles POST /api/store/remove
+func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req RemoveRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Match == "" {
+		http.Error(w, "match is required", http.StatusBadRequest)
+		return
+	}
+
+	// Build args for hauler store remove command
+	args := []string{"store", "remove", req.Match}
+
+	// Optional force flag to bypass confirmation
+	if req.Force {
+		args = append(args, "--force")
+	}
+
+	// Create a job for the remove operation
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating remove job: %v", err)
+		http.Error(w, "Failed to create remove job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background
+	go func() {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
+			log.Printf("Error starting remove job %d: %v", job.ID, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":    job.ID,
+		"message":  "Remove job started",
+		"match":    req.Match,
+		"force":    req.Force,
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
@@ -915,5 +972,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/load", h.Load)
 	mux.HandleFunc("/api/store/extract", h.Extract)
 	mux.HandleFunc("/api/store/copy", h.Copy)
+	mux.HandleFunc("/api/store/remove", h.Remove)
 	mux.HandleFunc("/api/downloads/", h.ServeDownload)
 }
