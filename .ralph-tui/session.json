@@ -3,10 +3,10 @@
   "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
   "status": "running",
   "startedAt": "2026-01-27T18:52:38.600Z",
-  "updatedAt": "2026-01-27T19:11:45.788Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-01-27T19:19:35.425Z",
+  "currentIteration": 3,
   "maxIterations": 150,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -107,8 +107,8 @@
       {
         "id": "US-016",
         "title": "Store Extract workflow (hauler store extract <artifact> --output ...)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-017",
@@ -180,6 +180,16 @@
       "durationMs": 335591,
       "startedAt": "2026-01-27T18:58:59.800Z",
       "endedAt": "2026-01-27T19:04:35.391Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-016",
+      "taskTitle": "Store Extract workflow (hauler store extract <artifact> --output ...)",
+      "taskCompleted": true,
+      "durationMs": 429259,
+      "startedAt": "2026-01-27T19:04:36.524Z",
+      "endedAt": "2026-01-27T19:11:45.783Z"
     }
   ],
   "skippedTaskIds": [],
