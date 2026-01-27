@@ -231,8 +231,77 @@ func (h *Handler) AddChart(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// AddFileRequest represents the request to add a file to the store
+type AddFileRequest struct {
+	FilePath string `json:"filePath,omitempty"`
+	URL      string `json:"url,omitempty"`
+	Name     string `json:"name,omitempty"`
+}
+
+// AddFile handles POST /api/store/add-file
+func (h *Handler) AddFile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req AddFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate that either filePath or URL is provided (mutually exclusive)
+	if req.FilePath == "" && req.URL == "" {
+		http.Error(w, "Either filePath or url is required", http.StatusBadRequest)
+		return
+	}
+	if req.FilePath != "" && req.URL != "" {
+		http.Error(w, "Please provide either filePath or url, not both", http.StatusBadRequest)
+		return
+	}
+
+	// Determine the file source
+	fileSource := req.FilePath
+	if fileSource == "" {
+		fileSource = req.URL
+	}
+
+	// Build args for hauler store add file command
+	args := []string{"store", "add", "file", fileSource}
+
+	// Optional name rewrite
+	if req.Name != "" {
+		args = append(args, "--name", req.Name)
+	}
+
+	// Create a job for the add file operation
+	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating add file job: %v", err)
+		http.Error(w, "Failed to create add file job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background
+	go func() {
+		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+			log.Printf("Error starting add file job %d: %v", job.ID, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":   job.ID,
+		"message": "Add file job started",
+		"file":    fileSource,
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
 	mux.HandleFunc("/api/store/add-chart", h.AddChart)
+	mux.HandleFunc("/api/store/add-file", h.AddFile)
 }
