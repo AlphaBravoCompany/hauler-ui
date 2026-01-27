@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { HashRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import StoreAddImage from './pages/StoreAddImage.jsx'
+import StoreAddChart from './pages/StoreAddChart.jsx'
 import './App.css'
 
 // === Context for Jobs ===
@@ -223,7 +224,8 @@ function Store() {
 
   // Store operations mapped to routes
   const storeOperations = [
-    { id: 'add', name: 'Add Content', description: 'Add images, charts, and files to the store', icon: '➕', route: '/store/add' },
+    { id: 'add-image', name: 'Add Image', description: 'Add container images to the store', icon: '🖼️', route: '/store/add' },
+    { id: 'add-chart', name: 'Add Chart', description: 'Add Helm charts to the store', icon: '📊', route: '/store/add-chart' },
     { id: 'sync', name: 'Sync', description: 'Sync store from manifest files', icon: '🔄', route: '/store/sync' },
     { id: 'save', name: 'Save', description: 'Package store as a portable archive', icon: '💾', route: '/store/save' },
     { id: 'load', name: 'Load', description: 'Load an archive into the store', icon: '📥', route: '/store/load' },
@@ -916,6 +918,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/store" element={<Store />} />
                 <Route path="/store/add" element={<StoreAddImage />} />
+                <Route path="/store/add-chart" element={<StoreAddChart />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />

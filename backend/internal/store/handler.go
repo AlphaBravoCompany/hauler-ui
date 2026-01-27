@@ -119,7 +119,120 @@ func (h *Handler) AddImage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// AddChartRequest represents the request to add a chart to the store
+type AddChartRequest struct {
+	Name                   string `json:"name"`
+	RepoURL                string `json:"repoUrl,omitempty"`
+	Version                string `json:"version,omitempty"`
+	Username               string `json:"username,omitempty"`
+	Password               string `json:"password,omitempty"`
+	KeyFile                string `json:"keyFile,omitempty"`
+	CertFile               string `json:"certFile,omitempty"`
+	CAFile                 string `json:"caFile,omitempty"`
+	InsecureSkipTLSVerify  bool   `json:"insecureSkipTlsVerify"`
+	PlainHTTP              bool   `json:"plainHttp"`
+	Verify                 bool   `json:"verify"`
+	AddDependencies        bool   `json:"addDependencies"`
+	AddImages              bool   `json:"addImages"`
+}
+
+// AddChart handles POST /api/store/add-chart
+func (h *Handler) AddChart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req AddChartRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Build args for hauler store add chart command
+	args := []string{"store", "add", "chart", req.Name}
+
+	// Optional repo URL
+	if req.RepoURL != "" {
+		args = append(args, "--repo", req.RepoURL)
+	}
+
+	// Optional version
+	if req.Version != "" {
+		args = append(args, "--version", req.Version)
+	}
+
+	// Optional username/password for auth
+	if req.Username != "" {
+		args = append(args, "--username", req.Username)
+	}
+	if req.Password != "" {
+		args = append(args, "--password", req.Password)
+	}
+
+	// Optional TLS files
+	if req.KeyFile != "" {
+		args = append(args, "--key-file", req.KeyFile)
+	}
+	if req.CertFile != "" {
+		args = append(args, "--cert-file", req.CertFile)
+	}
+	if req.CAFile != "" {
+		args = append(args, "--ca-file", req.CAFile)
+	}
+
+	// TLS options
+	if req.InsecureSkipTLSVerify {
+		args = append(args, "--insecure-skip-tls-verify")
+	}
+	if req.PlainHTTP {
+		args = append(args, "--plain-http")
+	}
+
+	// Verify option
+	if req.Verify {
+		args = append(args, "--verify")
+	}
+
+	// Capability-driven options
+	if req.AddDependencies {
+		args = append(args, "--add-dependencies")
+	}
+	if req.AddImages {
+		args = append(args, "--add-images")
+	}
+
+	// Create a job for the add chart operation
+	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating add chart job: %v", err)
+		http.Error(w, "Failed to create add chart job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background
+	go func() {
+		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+			log.Printf("Error starting add chart job %d: %v", job.ID, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":   job.ID,
+		"message": "Add chart job started",
+		"name":    req.Name,
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
+	mux.HandleFunc("/api/store/add-chart", h.AddChart)
 }

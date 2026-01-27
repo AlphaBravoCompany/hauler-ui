@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T17:16:44.971Z",
-  "currentIteration": 8,
+  "updatedAt": "2026-01-27T17:21:27.006Z",
+  "currentIteration": 9,
   "maxIterations": 150,
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -65,8 +65,8 @@
       {
         "id": "US-009",
         "title": "Store Add Image workflow (hauler store add image)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-010",
@@ -240,6 +240,16 @@
       "durationMs": 339658,
       "startedAt": "2026-01-27T17:03:30.277Z",
       "endedAt": "2026-01-27T17:09:09.935Z"
+    },
+    {
+      "iteration": 9,
+      "status": "completed",
+      "taskId": "US-009",
+      "taskTitle": "Store Add Image workflow (hauler store add image)",
+      "taskCompleted": true,
+      "durationMs": 453956,
+      "startedAt": "2026-01-27T17:09:11.005Z",
+      "endedAt": "2026-01-27T17:16:44.961Z"
     }
   ],
   "skippedTaskIds": [],
