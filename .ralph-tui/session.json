@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
+  "status": "running",
+  "startedAt": "2026-01-27T15:16:19.089Z",
+  "updatedAt": "2026-01-27T15:17:36.411Z",
+  "currentIteration": 0,
+  "maxIterations": 150,
+  "tasksCompleted": 0,
+  "isPaused": false,
+  "agentPlugin": "claude",
+  "trackerState": {
+    "plugin": "json",
+    "prdPath": "./prd.json",
+    "totalTasks": 24,
+    "tasks": [
+      {
+        "id": "US-001",
+        "title": "Repo scaffold: backend+frontend+docker skeleton",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-002",
+        "title": "Container persistence model for Hauler dirs",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-003",
+        "title": "SQLite schema + migrations for UI state",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-004",
+        "title": "Job runner that executes hauler CLI and streams logs",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-005",
+        "title": "Detect installed hauler version + capabilities",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-006",
+        "title": "Frontend shell: navigation + job console",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-007",
+        "title": "Registry login UI (hauler login) + secure handling",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-008",
+        "title": "Store overview page (read-only): current paths + basic info",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-009",
+        "title": "Store Add Image workflow (hauler store add image)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-010",
+        "title": "Store Add Chart workflow (hauler store add chart)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-011",
+        "title": "Store Add File workflow (hauler store add file)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-012",
+        "title": "Manifest library CRUD (YAML editor + saved manifests)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-013",
+        "title": "Store Sync workflow (hauler store sync --filename ...)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-014",
+        "title": "Store Save workflow (hauler store save --filename ...)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-015",
+        "title": "Store Load workflow (hauler store load --filename ...)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-016",
+        "title": "Store Extract workflow (hauler store extract <artifact> --output ...)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-017",
+        "title": "Store Copy workflow (registry:// and dir:// targets)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-018",
+        "title": "Serve Registry control plane (start/stop/status)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-019",
+        "title": "Serve Fileserver control plane (start/stop/status)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-020",
+        "title": "Store Remove workflow (experimental)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-021",
+        "title": "Settings UI for global hauler flags and defaults",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-022",
+        "title": "UX polish: beginner wizards for common flows",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-023",
+        "title": "Security: optional single-user UI password + session cookie",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-024",
+        "title": "Documentation: runbook and troubleshooting",
+        "status": "open",
+        "completedInSession": false
+      }
+    ]
+  },
+  "iterations": [],
+  "skippedTaskIds": [],
+  "cwd": "/home/roughneck/projects/hauler-ui",
+  "activeTaskIds": [],
+  "subagentPanelVisible": false
+}

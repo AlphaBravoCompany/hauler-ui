@@ -1,0 +1,504 @@
+{
+  "name": "Hauler Web UI (single-user)",
+  "description": "A single-container, beginner-friendly web UI that provides full operational parity with Rancher Government Hauler CLI (store/add/sync/save/load/copy/extract/serve/remove, login/logout, version/help).",
+  "branchName": "ralph/hauler-webui",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Repo scaffold: backend+frontend+docker skeleton",
+      "description": "As the developer, I need a working monorepo structure so iterative tasks can land cleanly.",
+      "acceptanceCriteria": [
+        "Create directories: /backend (Go), /web (Vite React), /deploy (docker/compose), /docs",
+        "Backend serves a /healthz JSON endpoint",
+        "Frontend builds to static assets (no runtime Node)",
+        "Dockerfile builds a single runnable image exposing :8080",
+        "make build/test/lint targets exist (stubs allowed initially)",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "Container persistence model for Hauler dirs",
+      "description": "As a user, I need predictable persistent storage for hauler store, temp, and docker auth.",
+      "acceptanceCriteria": [
+        "Container uses /data as persistent root (document required mounts)",
+        "Backend config supports paths for: HAULER_DIR, HAULER_STORE_DIR, HAULER_TEMP_DIR (defaults set)",
+        "Document that hauler login writes to ~/.docker/config.json and show where that lives in-container",
+        "Expose these settings in UI (read-only display for now)",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "dependsOn": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "SQLite schema + migrations for UI state",
+      "description": "As a user, I want job history and saved manifests to persist across restarts.",
+      "acceptanceCriteria": [
+        "Add sqlite DB file at /data/app.db",
+        "Create migrations for tables: settings, jobs, job_logs, saved_manifests, serve_processes",
+        "Implement migration runner on startup",
+        "Unit test: migrations apply on empty DB",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "dependsOn": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Job runner that executes hauler CLI and streams logs",
+      "description": "As a user, I need long-running operations (sync/save/copy) to run as jobs with streaming output.",
+      "acceptanceCriteria": [
+        "Implement job creation: POST /api/jobs {command,args,envOverrides}",
+        "Runner executes a child process, captures stdout+stderr line-by-line",
+        "Persist job state: queued/running/succeeded/failed + timestamps",
+        "Persist logs incrementally in job_logs",
+        "Expose SSE endpoint: GET /api/jobs/:id/stream",
+        "Unit test: runner captures stdout and persists logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "dependsOn": [
+        "US-003"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Detect installed hauler version + capabilities",
+      "description": "As a user, the UI must match the actual hauler binary flags (docs differ by version).",
+      "acceptanceCriteria": [
+        "Backend runs `hauler version` and stores parsed version string",
+        "Backend can run `hauler help` and `hauler store ... --help` to extract subcommands and flags",
+        "Persist detected capabilities in memory cache (refresh button)",
+        "Expose GET /api/hauler/capabilities returning parsed structure",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "dependsOn": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Frontend shell: navigation + job console",
+      "description": "As a beginner, I need a simple UI with clear sections and a unified job log viewer.",
+      "acceptanceCriteria": [
+        "Pages: Dashboard, Store, Manifests, Hauls, Serve, Copy/Export, Registry Login, Settings, Job History",
+        "Global Job Drawer shows running jobs and tail logs via SSE",
+        "Job detail page shows full logs and exit status",
+        "Error states are human-readable (include command + exit code)",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "dependsOn": [
+        "US-005"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Registry login UI (hauler login) + secure handling",
+      "description": "As a user, I want to login to registries from the UI so copy/sync can authenticate.",
+      "acceptanceCriteria": [
+        "UI form: registry URL, username, password (password not stored in sqlite)",
+        "Backend executes `hauler login <registry> --username ... --password ...`",
+        "Logs shown as job output (redact secrets in logs)",
+        "Show note that credentials are stored at ~/.docker/config.json per hauler behavior",
+        "Add logout action calling `hauler logout <registry>`",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "dependsOn": [
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Store overview page (read-only): current paths + basic info",
+      "description": "As a user, I want to see where my store is and what operations are available.",
+      "acceptanceCriteria": [
+        "Show configured store dir, hauler dir, temp dir, ignore-errors default",
+        "Show detected store subcommands from capabilities",
+        "Provide links to each operation page",
+        "Display key known limitations/warnings (podman tarball; copy requires root login; tempdir space)",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "dependsOn": [
+        "US-006",
+        "US-005"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Store Add Image workflow (hauler store add image)",
+      "description": "As a user, I want a guided way to add images to the store with platform and cosign options.",
+      "acceptanceCriteria": [
+        "UI fields: image reference; optional platform; optional key path; keyless options; use-tlog-verify toggle",
+        "Backend builds args for `hauler store add image` (and includes global flags for store/haulerdir)",
+        "Show examples and inline help copied from docs (busybox, repo:tag, digest) in UI help panel",
+        "Support running as a job with streaming logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "Store Add Chart workflow (hauler store add chart)",
+      "description": "As a user, I want a guided way to add Helm charts from HTTP/OCI/local with auth and TLS controls.",
+      "acceptanceCriteria": [
+        "UI fields: chart name/path; repo URL; version; username/password; TLS files; verify toggle; insecure-skip-tls-verify toggle",
+        "If detected hauler supports `--add-dependencies` and `--add-images`, expose toggles (capability-driven)",
+        "Backend runs as job and streams logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "dependsOn": [
+        "US-005",
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "Store Add File workflow (hauler store add file)",
+      "description": "As a user, I want to add local files or URLs and optionally rename them in the store.",
+      "acceptanceCriteria": [
+        "UI supports file path OR URL input (mutually exclusive validation)",
+        "Optional name rewrite field mapped to --name",
+        "Job execution + log stream",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "Manifest library CRUD (YAML editor + saved manifests)",
+      "description": "As a user, I want to create/edit/save manifests for Images/Charts/Files and reuse them.",
+      "acceptanceCriteria": [
+        "Saved manifests stored in sqlite with name, description, yaml text, tags",
+        "Editor supports basic YAML validation (client-side) and server-side size limits",
+        "Provide manifest templates for Images/Charts/Files using apiVersion content.hauler.cattle.io/v1",
+        "Expose download of YAML file",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": false,
+      "dependsOn": [
+        "US-003",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "Store Sync workflow (hauler store sync --filename ...)",
+      "description": "As a user, I want to run sync against one or more manifests, including product-based pulls.",
+      "acceptanceCriteria": [
+        "UI lets user select: one saved manifest OR upload/paste YAML OR reference a file path",
+        "Support multiple -f/--filename entries (list UI) defaulting to hauler-manifest.yaml",
+        "Expose platform + key + keyless options + registry override + products + product-registry + rewrite (experimental) when supported",
+        "Job execution + logs",
+        "Inline warning about --products/--product-registry default registry changing (display from docs/release notes)",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": false,
+      "dependsOn": [
+        "US-012",
+        "US-004",
+        "US-006",
+        "US-005"
+      ]
+    },
+    {
+      "id": "US-014",
+      "title": "Store Save workflow (hauler store save --filename ...)",
+      "description": "As a user, I want to package my store into a haul.tar.zst (or named archive) and optionally import to containerd.",
+      "acceptanceCriteria": [
+        "UI fields: filename (default haul.tar.zst), optional platform, optional containerd target string",
+        "Job execution + logs",
+        "After success, UI shows archive path and provides HTTP download link (range requests supported)",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-015",
+      "title": "Store Load workflow (hauler store load --filename ...)",
+      "description": "As a user, I want to load one or more haul archives into the store and see warnings for unsupported formats.",
+      "acceptanceCriteria": [
+        "UI supports specifying one or more input filenames (default haul.tar.zst)",
+        "Display warning: Docker-saved tarball supported as of v1.3; Podman tarballs not supported",
+        "Job execution + logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-016",
+      "title": "Store Extract workflow (hauler store extract <artifact> --output ...)",
+      "description": "As a user, I want to pull a specific artifact out of the store to disk.",
+      "acceptanceCriteria": [
+        "UI input: artifact reference string; output directory selector (path)",
+        "Job execution + logs",
+        "After success, UI shows where files were extracted",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-017",
+      "title": "Store Copy workflow (registry:// and dir:// targets)",
+      "description": "As a user, I want to copy the entire store to another registry or a directory export.",
+      "acceptanceCriteria": [
+        "UI supports targets: registry://<registry[/path]> and dir://<path>",
+        "Expose flags: insecure, plain-http, only (sig/att selection) when target is registry",
+        "Display warning: must login to registry root (no path) before copy to path",
+        "Job execution + logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 17,
+      "passes": false,
+      "dependsOn": [
+        "US-007",
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-018",
+      "title": "Serve Registry control plane (start/stop/status)",
+      "description": "As a user, I want to start and stop the embedded hauler registry and see status/ports.",
+      "acceptanceCriteria": [
+        "UI form maps to `hauler store serve registry` flags: port (default 5000), readonly (default true), tls cert/key, directory, config file",
+        "Start spawns a managed background process recorded in serve_processes table",
+        "Stop sends SIGTERM and verifies exit",
+        "Status shows PID, start time, effective port, and last log lines",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 18,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-003",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-019",
+      "title": "Serve Fileserver control plane (start/stop/status)",
+      "description": "As a user, I want to start and stop the embedded hauler fileserver and see status/ports.",
+      "acceptanceCriteria": [
+        "UI form maps to `hauler store serve fileserver` flags: port (default 8080), timeout, tls cert/key, directory",
+        "Start/stop/status identical patterns to registry serve",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": false,
+      "dependsOn": [
+        "US-018"
+      ]
+    },
+    {
+      "id": "US-020",
+      "title": "Store Remove workflow (experimental)",
+      "description": "As a user, I want to remove artifacts using simple string matching with confirmation controls.",
+      "acceptanceCriteria": [
+        "UI input: match string (supports ':latest' or 'busybox' style partials)",
+        "Require confirmation step; expose --force to bypass confirmation",
+        "Display warning: feature is experimental",
+        "Job execution + logs",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "dependsOn": [
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-021",
+      "title": "Settings UI for global hauler flags and defaults",
+      "description": "As a user, I want to set default retries, log level, ignore-errors, and tempdir behavior once.",
+      "acceptanceCriteria": [
+        "Settings stored in sqlite and applied to every job execution",
+        "Expose fields: log-level, retries, ignore-errors, default platform, default key path, tempdir",
+        "Include help text for HAULER_* environment equivalents",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 21,
+      "passes": false,
+      "dependsOn": [
+        "US-003",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-022",
+      "title": "UX polish: beginner wizards for common flows",
+      "description": "As a beginner, I want guided workflows for the canonical airgap lifecycle: add/sync -> save -> move -> load -> serve/copy.",
+      "acceptanceCriteria": [
+        "Wizard 1: Build store (add image/chart/file + sync from manifest)",
+        "Wizard 2: Package haul (save + checksum instructions)",
+        "Wizard 3: In airgap (load + serve registry/fileserver OR copy to existing registry)",
+        "Each step links to underlying advanced page and shows the exact hauler command that will run",
+        "make build passes",
+        "make lint passes",
+        "make test passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 22,
+      "passes": false,
+      "dependsOn": [
+        "US-009",
+        "US-010",
+        "US-011",
+        "US-013",
+        "US-014",
+        "US-015",
+        "US-018",
+        "US-017"
+      ]
+    },
+    {
+      "id": "US-023",
+      "title": "Security: optional single-user UI password + session cookie",
+      "description": "As a user, I want a simple protection layer when exposing the UI beyond localhost.",
+      "acceptanceCriteria": [
+        "If HAULER_UI_PASSWORD is set, require login to access UI routes",
+        "Session cookie is httpOnly; logout clears session",
+        "No multi-user accounts; single shared password only",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "dependsOn": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-024",
+      "title": "Documentation: runbook and troubleshooting",
+      "description": "As a user, I need exact steps to run the container and understand common hauler pitfalls.",
+      "acceptanceCriteria": [
+        "Document docker run + compose examples with volumes for /data",
+        "Document how registry login storage works and where config lives in container",
+        "Document known limitations and how UI surfaces them",
+        "Document how to run with ralph-tui using prd.json",
+        "make build passes",
+        "make lint passes",
+        "make test passes"
+      ],
+      "priority": 24,
+      "passes": false,
+      "dependsOn": [
+        "US-022",
+        "US-023"
+      ]
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-01-27T15:17:36.404Z"
+  }
+}
