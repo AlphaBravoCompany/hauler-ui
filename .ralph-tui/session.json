@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T17:09:09.940Z",
-  "currentIteration": 7,
+  "updatedAt": "2026-01-27T17:16:44.971Z",
+  "currentIteration": 8,
   "maxIterations": 150,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -59,8 +59,8 @@
       {
         "id": "US-008",
         "title": "Store overview page (read-only): current paths + basic info",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-009",
@@ -230,6 +230,16 @@
       "durationMs": 440139,
       "startedAt": "2026-01-27T16:56:09.052Z",
       "endedAt": "2026-01-27T17:03:29.191Z"
+    },
+    {
+      "iteration": 8,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Store overview page (read-only): current paths + basic info",
+      "taskCompleted": true,
+      "durationMs": 339658,
+      "startedAt": "2026-01-27T17:03:30.277Z",
+      "endedAt": "2026-01-27T17:09:09.935Z"
     }
   ],
   "skippedTaskIds": [],
