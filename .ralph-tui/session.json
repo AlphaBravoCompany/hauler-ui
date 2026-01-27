@@ -3,10 +3,10 @@
   "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
   "status": "running",
   "startedAt": "2026-01-27T18:52:38.600Z",
-  "updatedAt": "2026-01-27T19:27:35.483Z",
-  "currentIteration": 4,
+  "updatedAt": "2026-01-27T19:34:48.319Z",
+  "currentIteration": 5,
   "maxIterations": 150,
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -119,8 +119,8 @@
       {
         "id": "US-018",
         "title": "Serve Registry control plane (start/stop/status)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-019",
@@ -200,6 +200,16 @@
       "durationMs": 468536,
       "startedAt": "2026-01-27T19:11:46.852Z",
       "endedAt": "2026-01-27T19:19:35.388Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "US-018",
+      "taskTitle": "Serve Registry control plane (start/stop/status)",
+      "taskCompleted": true,
+      "durationMs": 478880,
+      "startedAt": "2026-01-27T19:19:36.517Z",
+      "endedAt": "2026-01-27T19:27:35.397Z"
     }
   ],
   "skippedTaskIds": [],
