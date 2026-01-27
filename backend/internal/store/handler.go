@@ -19,15 +19,15 @@ import (
 
 // Handler handles HTTP requests for store operations
 type Handler struct {
-	jobRunner *jobrunner.Runner
-	cfg       *config.Config
+	JobRunner *jobrunner.Runner
+	Cfg       *config.Config
 }
 
 // NewHandler creates a new store handler
 func NewHandler(jobRunner *jobrunner.Runner, cfg *config.Config) *Handler {
 	return &Handler{
-		jobRunner: jobRunner,
-		cfg:       cfg,
+		JobRunner: jobRunner,
+		Cfg:       cfg,
 	}
 }
 
@@ -104,7 +104,7 @@ func (h *Handler) AddImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the add image operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating add image job: %v", err)
 		http.Error(w, "Failed to create add image job", http.StatusInternalServerError)
@@ -113,7 +113,7 @@ func (h *Handler) AddImage(w http.ResponseWriter, r *http.Request) {
 
 	// Start the job in background
 	go func() {
-		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
 			log.Printf("Error starting add image job %d: %v", job.ID, err)
 		}
 	}()
@@ -216,7 +216,7 @@ func (h *Handler) AddChart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the add chart operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating add chart job: %v", err)
 		http.Error(w, "Failed to create add chart job", http.StatusInternalServerError)
@@ -225,7 +225,7 @@ func (h *Handler) AddChart(w http.ResponseWriter, r *http.Request) {
 
 	// Start the job in background
 	go func() {
-		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
 			log.Printf("Error starting add chart job %d: %v", job.ID, err)
 		}
 	}()
@@ -302,7 +302,7 @@ func (h *Handler) AddFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the add file operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating add file job: %v", err)
 		http.Error(w, "Failed to create add file job", http.StatusInternalServerError)
@@ -311,7 +311,7 @@ func (h *Handler) AddFile(w http.ResponseWriter, r *http.Request) {
 
 	// Start the job in background
 	go func() {
-		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
 			log.Printf("Error starting add file job %d: %v", job.ID, err)
 		}
 	}()
@@ -328,12 +328,12 @@ func (h *Handler) AddFile(w http.ResponseWriter, r *http.Request) {
 // writeTempManifest writes manifest YAML content to a temporary file and returns the path
 func (h *Handler) writeTempManifest(yamlContent string) (string, error) {
 	// Ensure temp directory exists
-	if err := os.MkdirAll(h.cfg.HaulerTempDir, 0755); err != nil {
+	if err := os.MkdirAll(h.Cfg.HaulerTempDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
 	// Create a temporary file with a predictable name for sync operations
-	tempFile := filepath.Join(h.cfg.HaulerTempDir, fmt.Sprintf("sync-manifest-%d.yaml", makeTimestamp()))
+	tempFile := filepath.Join(h.Cfg.HaulerTempDir, fmt.Sprintf("sync-manifest-%d.yaml", makeTimestamp()))
 	if err := os.WriteFile(tempFile, []byte(yamlContent), 0644); err != nil {
 		return "", fmt.Errorf("failed to write temp manifest: %w", err)
 	}
@@ -447,7 +447,7 @@ func (h *Handler) Sync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the sync operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating sync job: %v", err)
 		http.Error(w, "Failed to create sync job", http.StatusInternalServerError)
@@ -456,7 +456,7 @@ func (h *Handler) Sync(w http.ResponseWriter, r *http.Request) {
 
 	// Start the job in background
 	go func() {
-		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
 			log.Printf("Error starting sync job %d: %v", job.ID, err)
 		}
 	}()
@@ -514,7 +514,7 @@ func (h *Handler) Save(w http.ResponseWriter, r *http.Request) {
 	if !filepath.IsAbs(filename) {
 		// If relative, it will be in the current working directory
 		// For predictability, we'll use the data directory
-		archivePath = filepath.Join(h.cfg.DataDir, filename)
+		archivePath = filepath.Join(h.Cfg.DataDir, filename)
 	}
 
 	// Store metadata for post-job processing
@@ -525,7 +525,7 @@ func (h *Handler) Save(w http.ResponseWriter, r *http.Request) {
 	metadataJSON, _ := json.Marshal(saveMetadata)
 
 	// Create a job with the metadata in env overrides for later retrieval
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, map[string]string{
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, map[string]string{
 		"HAULER_SAVE_METADATA": string(metadataJSON),
 	})
 	if err != nil {
@@ -548,7 +548,7 @@ func (h *Handler) Save(w http.ResponseWriter, r *http.Request) {
 
 // runSaveJob starts a save job and updates the result with archive path on success
 func (h *Handler) runSaveJob(ctx context.Context, jobID int64, archivePath string) {
-	if err := h.jobRunner.Start(ctx, jobID); err != nil {
+	if err := h.JobRunner.Start(ctx, jobID); err != nil {
 		log.Printf("Error starting save job %d: %v", jobID, err)
 		return
 	}
@@ -560,7 +560,7 @@ func (h *Handler) runSaveJob(ctx context.Context, jobID int64, archivePath strin
 		defer ticker.Stop()
 
 		for range ticker.C {
-			job, err := h.jobRunner.GetJob(ctx, jobID)
+			job, err := h.JobRunner.GetJob(ctx, jobID)
 			if err != nil {
 				return
 			}
@@ -573,7 +573,7 @@ func (h *Handler) runSaveJob(ctx context.Context, jobID int64, archivePath strin
 						"filename":    filepath.Base(archivePath),
 					}
 					resultJSON, _ := json.Marshal(result)
-					_ = h.jobRunner.UpdateResult(ctx, jobID, string(resultJSON))
+					_ = h.JobRunner.UpdateResult(ctx, jobID, string(resultJSON))
 				}
 				return
 			}
@@ -613,7 +613,7 @@ func (h *Handler) ServeDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the full path to the archive
-	archivePath := filepath.Join(h.cfg.DataDir, filename)
+	archivePath := filepath.Join(h.Cfg.DataDir, filename)
 
 	// Check if file exists
 	fileInfo, err := os.Stat(archivePath)
@@ -721,7 +721,7 @@ func (h *Handler) Extract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the extract operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating extract job: %v", err)
 		http.Error(w, "Failed to create extract job", http.StatusInternalServerError)
@@ -743,7 +743,7 @@ func (h *Handler) Extract(w http.ResponseWriter, r *http.Request) {
 
 // runExtractJob starts an extract job and updates the result with output directory on success
 func (h *Handler) runExtractJob(ctx context.Context, jobID int64, outputDir string) {
-	if err := h.jobRunner.Start(ctx, jobID); err != nil {
+	if err := h.JobRunner.Start(ctx, jobID); err != nil {
 		log.Printf("Error starting extract job %d: %v", jobID, err)
 		return
 	}
@@ -754,7 +754,7 @@ func (h *Handler) runExtractJob(ctx context.Context, jobID int64, outputDir stri
 		defer ticker.Stop()
 
 		for range ticker.C {
-			job, err := h.jobRunner.GetJob(ctx, jobID)
+			job, err := h.JobRunner.GetJob(ctx, jobID)
 			if err != nil {
 				return
 			}
@@ -770,7 +770,7 @@ func (h *Handler) runExtractJob(ctx context.Context, jobID int64, outputDir stri
 					"outputDir": resultOutputDir,
 				}
 				resultJSON, _ := json.Marshal(result)
-				_ = h.jobRunner.UpdateResult(ctx, jobID, string(resultJSON))
+				_ = h.JobRunner.UpdateResult(ctx, jobID, string(resultJSON))
 				return
 			}
 
@@ -808,7 +808,7 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a job for the load operation
-	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating load job: %v", err)
 		http.Error(w, "Failed to create load job", http.StatusInternalServerError)
@@ -817,7 +817,7 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 
 	// Start the job in background
 	go func() {
-		if err := h.jobRunner.Start(r.Context(), job.ID); err != nil {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
 			log.Printf("Error starting load job %d: %v", job.ID, err)
 		}
 	}()
@@ -831,6 +831,80 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CopyRequest represents the request to copy the store to a registry or directory
+type CopyRequest struct {
+	Target    string `json:"target"`
+	Insecure  bool   `json:"insecure"`
+	PlainHTTP bool   `json:"plainHttp"`
+	Only      string `json:"only,omitempty"`
+}
+
+// Copy handles POST /api/store/copy
+func (h *Handler) Copy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CopyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Target == "" {
+		http.Error(w, "target is required", http.StatusBadRequest)
+		return
+	}
+
+	// Validate target format
+	if !strings.HasPrefix(req.Target, "registry://") && !strings.HasPrefix(req.Target, "dir://") {
+		http.Error(w, "target must start with registry:// or dir://", http.StatusBadRequest)
+		return
+	}
+
+	// Build args for hauler store copy command
+	args := []string{"store", "copy", req.Target}
+
+	// Optional insecure flag
+	if req.Insecure {
+		args = append(args, "--insecure")
+	}
+
+	// Optional plain HTTP flag
+	if req.PlainHTTP {
+		args = append(args, "--plain-http")
+	}
+
+	// Optional only filter (sig, att)
+	if req.Only != "" {
+		args = append(args, "--only", req.Only)
+	}
+
+	// Create a job for the copy operation
+	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	if err != nil {
+		log.Printf("Error creating copy job: %v", err)
+		http.Error(w, "Failed to create copy job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background
+	go func() {
+		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
+			log.Printf("Error starting copy job %d: %v", job.ID, err)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":    job.ID,
+		"message":  "Copy job started",
+		"target":   req.Target,
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
@@ -840,5 +914,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/save", h.Save)
 	mux.HandleFunc("/api/store/load", h.Load)
 	mux.HandleFunc("/api/store/extract", h.Extract)
+	mux.HandleFunc("/api/store/copy", h.Copy)
 	mux.HandleFunc("/api/downloads/", h.ServeDownload)
 }

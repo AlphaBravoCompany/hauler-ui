@@ -7,6 +7,7 @@ import StoreSync from './pages/StoreSync.jsx'
 import StoreSave from './pages/StoreSave.jsx'
 import StoreLoad from './pages/StoreLoad.jsx'
 import StoreExtract from './pages/StoreExtract.jsx'
+import StoreCopy from './pages/StoreCopy.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -237,7 +238,7 @@ function Store() {
     { id: 'save', name: 'Save', description: 'Package store as a portable archive', icon: '💾', route: '/store/save' },
     { id: 'load', name: 'Load', description: 'Load an archive into the store', icon: '📥', route: '/store/load' },
     { id: 'extract', name: 'Extract', description: 'Extract artifacts from the store', icon: '📤', route: '/store/extract' },
-    { id: 'copy', name: 'Copy', description: 'Copy store to registry or directory', icon: '📋', route: '/copy' },
+    { id: 'copy', name: 'Copy', description: 'Copy store to registry or directory', icon: '📋', route: '/store/copy' },
     { id: 'serve', name: 'Serve', description: 'Serve registry or fileserver', icon: '🌐', route: '/serve' },
     { id: 'remove', name: 'Remove', description: 'Remove artifacts from store (experimental)', icon: '🗑️', route: '/store/remove' },
   ]
@@ -961,6 +962,7 @@ function App() {
                 <Route path="/store/save" element={<StoreSave />} />
                 <Route path="/store/load" element={<StoreLoad />} />
                 <Route path="/store/extract" element={<StoreExtract />} />
+                <Route path="/store/copy" element={<StoreCopy />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />
