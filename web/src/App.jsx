@@ -9,6 +9,7 @@ import StoreLoad from './pages/StoreLoad.jsx'
 import StoreExtract from './pages/StoreExtract.jsx'
 import StoreCopy from './pages/StoreCopy.jsx'
 import ServeRegistry from './pages/ServeRegistry.jsx'
+import ServeFileserver from './pages/ServeFileserver.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -427,6 +428,17 @@ function Serve() {
                 <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Registry</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   Start an embedded container registry
+                </div>
+              </div>
+            </div>
+          </NavLink>
+          <NavLink to="/serve/fileserver" className="operation-card" style={{ textDecoration: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>📁</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Fileserver</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Start an embedded HTTP file server
                 </div>
               </div>
             </div>
@@ -994,6 +1006,7 @@ function App() {
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />
                 <Route path="/serve/registry" element={<ServeRegistry />} />
+                <Route path="/serve/fileserver" element={<ServeFileserver />} />
                 <Route path="/copy" element={<CopyExport />} />
                 <Route path="/registry" element={<RegistryLogin />} />
                 <Route path="/settings" element={<Settings />} />
