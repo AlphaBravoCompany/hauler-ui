@@ -10,6 +10,7 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/config"
 	"github.com/hauler-ui/hauler-ui/backend/internal/hauler"
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
+	"github.com/hauler-ui/hauler-ui/backend/internal/registry"
 	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
 )
 
@@ -33,6 +34,9 @@ func main() {
 	haulerDetector := hauler.New(haulerBinary)
 	haulerHandler := hauler.NewHandler(haulerDetector)
 
+	// Initialize registry handler
+	registryHandler := registry.NewHandler(jobRunner, cfg)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
@@ -40,6 +44,9 @@ func main() {
 
 	// Hauler capabilities endpoints
 	haulerHandler.RegisterRoutes(mux)
+
+	// Registry endpoints
+	registryHandler.RegisterRoutes(mux)
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {

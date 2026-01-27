@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"sync"
 	"syscall"
 	"time"
@@ -182,7 +183,9 @@ func (r *Runner) streamOutput(ctx context.Context, jobID int64, reader io.Reader
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if err := r.appendLog(ctx, jobID, streamName, line); err != nil {
+		// Redact sensitive information before storing
+		redactedLine := redactSensitive(line)
+		if err := r.appendLog(ctx, jobID, streamName, redactedLine); err != nil {
 			// Log error but continue scanning
 			fmt.Printf("Error appending log: %v\n", err)
 		}
@@ -190,6 +193,42 @@ func (r *Runner) streamOutput(ctx context.Context, jobID int64, reader io.Reader
 	if err := scanner.Err(); err != nil {
 		_ = r.appendLog(ctx, jobID, streamName, fmt.Sprintf("[stream error: %v]", err))
 	}
+}
+
+// redactSensitive redacts potential sensitive information from log lines
+// This includes passwords, tokens, and other credentials that might appear in output
+func redactSensitive(line string) string {
+	// Redact environment variable assignments with common secret names
+	secretPatterns := []struct {
+		pattern *regexp.Regexp
+		replacement string
+	}{
+		// Password environment variables
+		{regexp.MustCompile(`(HAULER_REGISTRY_PASSWORD=)\S+`), "$1[REDACTED]"},
+		{regexp.MustCompile(`(PASSWORD=)\S+`), "$1[REDACTED]"},
+		{regexp.MustCompile(`(password=)\S+`), "$1[REDACTED]"},
+		// Token patterns
+		{regexp.MustCompile(`(token=)\S+`), "$1[REDACTED]"},
+		{regexp.MustCompile(`(TOKEN=)\S+`), "$1[REDACTED]"},
+		// Basic auth patterns (in URLs)
+		{regexp.MustCompile(`://[^:/]+:[^@]+@`), "://[REDACTED]:@"},
+		// Bearer tokens
+		{regexp.MustCompile(`(Bearer\s+)\S+`), "${1}[REDACTED]"},
+		{regexp.MustCompile(`(bearer\s+)\S+`), "${1}[REDACTED]"},
+		// API keys
+		{regexp.MustCompile(`(api[_-]?key=)\S+`), "$1[REDACTED]"},
+		{regexp.MustCompile(`(API[_-]?KEY=)\S+`), "$1[REDACTED]"},
+		// Docker config auth fields
+		{regexp.MustCompile(`("auth":\s*")[^"]+(")`), "${1}[REDACTED]$2"},
+		{regexp.MustCompile(`("auths":\s*\{[^}]*"auth":\s*")[^"]+(")`), "${1}[REDACTED]$2"},
+	}
+
+	redacted := line
+	for _, rp := range secretPatterns {
+		redacted = rp.pattern.ReplaceAllString(redacted, rp.replacement)
+	}
+
+	return redacted
 }
 
 // appendLog adds a log entry to the database
