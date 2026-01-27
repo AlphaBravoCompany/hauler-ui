@@ -3,10 +3,10 @@
   "sessionId": "9cbbcb6d-129a-470f-8465-d4a66cf7760f",
   "status": "running",
   "startedAt": "2026-01-27T20:04:57.108Z",
-  "updatedAt": "2026-01-27T20:22:26.550Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-01-27T20:25:43.049Z",
+  "currentIteration": 3,
   "maxIterations": 150,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -149,8 +149,8 @@
       {
         "id": "US-023",
         "title": "Security: optional single-user UI password + session cookie",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-024",
@@ -180,6 +180,16 @@
       "durationMs": 182159,
       "startedAt": "2026-01-27T20:11:08.519Z",
       "endedAt": "2026-01-27T20:14:10.678Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-023",
+      "taskTitle": "Security: optional single-user UI password + session cookie",
+      "taskCompleted": true,
+      "durationMs": 494798,
+      "startedAt": "2026-01-27T20:14:11.747Z",
+      "endedAt": "2026-01-27T20:22:26.545Z"
     }
   ],
   "skippedTaskIds": [],
