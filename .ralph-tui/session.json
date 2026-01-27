@@ -3,10 +3,10 @@
   "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
   "status": "running",
   "startedAt": "2026-01-27T18:52:38.600Z",
-  "updatedAt": "2026-01-27T19:19:35.425Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-01-27T19:27:35.483Z",
+  "currentIteration": 4,
   "maxIterations": 150,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -113,8 +113,8 @@
       {
         "id": "US-017",
         "title": "Store Copy workflow (registry:// and dir:// targets)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-018",
@@ -190,6 +190,16 @@
       "durationMs": 429259,
       "startedAt": "2026-01-27T19:04:36.524Z",
       "endedAt": "2026-01-27T19:11:45.783Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "US-017",
+      "taskTitle": "Store Copy workflow (registry:// and dir:// targets)",
+      "taskCompleted": true,
+      "durationMs": 468536,
+      "startedAt": "2026-01-27T19:11:46.852Z",
+      "endedAt": "2026-01-27T19:19:35.388Z"
     }
   ],
   "skippedTaskIds": [],
