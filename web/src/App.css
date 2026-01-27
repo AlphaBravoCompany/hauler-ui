@@ -560,6 +560,22 @@
   margin-bottom: 0.5rem;
 }
 
+/* === Operation Cards === */
+.operation-card {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.operation-card:hover {
+  border-color: var(--accent-amber);
+  background-color: rgba(255, 176, 0, 0.05);
+}
+
 /* === Responsive === */
 @media (max-width: 768px) {
   .sidebar {
