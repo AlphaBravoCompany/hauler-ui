@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T15:25:16.660Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-01-27T15:30:53.533Z",
+  "currentIteration": 3,
   "maxIterations": 150,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -29,8 +29,8 @@
       {
         "id": "US-003",
         "title": "SQLite schema + migrations for UI state",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-004",
@@ -180,6 +180,16 @@
       "durationMs": 198229,
       "startedAt": "2026-01-27T15:17:37.457Z",
       "endedAt": "2026-01-27T15:20:55.686Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-003",
+      "taskTitle": "SQLite schema + migrations for UI state",
+      "taskCompleted": true,
+      "durationMs": 259929,
+      "startedAt": "2026-01-27T15:20:56.727Z",
+      "endedAt": "2026-01-27T15:25:16.656Z"
     }
   ],
   "skippedTaskIds": [],
