@@ -108,7 +108,15 @@ func (r *Runner) Start(ctx context.Context, jobID int64) error {
 	}
 
 	// Build environment - start with current env and add overrides
-	env := buildEnv(job.EnvOverrides)
+	baseEnv := buildEnv(job.EnvOverrides)
+
+	// Apply settings from database as environment variables
+	env, err := r.applySettingsToEnv(ctx, baseEnv, job.EnvOverrides)
+	if err != nil {
+		// Log but continue - settings are optional
+		fmt.Printf("Warning: failed to apply settings: %v\n", err)
+		env = baseEnv
+	}
 
 	// Create command
 	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
@@ -438,4 +446,77 @@ func buildEnv(envOverrides map[string]string) []string {
 	}
 
 	return env
+}
+
+// getSettings retrieves all settings from the database
+func (r *Runner) getSettings(ctx context.Context) (map[string]string, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT key, value FROM settings`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	settings := make(map[string]string)
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			continue
+		}
+		if value != "" {
+			settings[key] = value
+		}
+	}
+
+	return settings, rows.Err()
+}
+
+// applySettingsToEnv applies database settings as environment variables
+func (r *Runner) applySettingsToEnv(ctx context.Context, baseEnv []string, userOverrides map[string]string) ([]string, error) {
+	// Get settings from database
+	settings, err := r.getSettings(ctx)
+	if err != nil {
+		// Log error but don't fail - settings are optional
+		fmt.Printf("Warning: failed to load settings: %v\n", err)
+		return baseEnv, nil
+	}
+
+	// Map of setting keys to environment variable names
+	settingEnvMap := map[string]string{
+		"log_level":        "HAULER_LOG_LEVEL",
+		"retries":          "HAULER_RETRIES",
+		"ignore_errors":    "HAULER_IGNORE_ERRORS",
+		"default_platform": "HAULER_DEFAULT_PLATFORM",
+		"default_key_path": "HAULER_KEY_PATH",
+		"temp_dir":         "HAULER_TEMP_DIR",
+	}
+
+	// Start with base environment
+	env := append([]string{}, baseEnv...)
+
+	// Apply settings as environment variables (only if not already set in user overrides)
+	for settingKey, envVar := range settingEnvMap {
+		if value, ok := settings[settingKey]; ok && value != "" {
+			// Check if user has already set this env var
+			userSet := false
+			for _, existing := range env {
+				if len(existing) > len(envVar)+1 && existing[:len(envVar)+1] == envVar+"=" {
+					userSet = true
+					break
+				}
+			}
+			// Also check user overrides
+			if _, userOverride := userOverrides[envVar]; userOverride {
+				userSet = true
+			}
+
+			// Only apply if user hasn't explicitly set it
+			if !userSet {
+				env = append(env, envVar+"="+value)
+			}
+		}
+	}
+
+	return env, nil
 }

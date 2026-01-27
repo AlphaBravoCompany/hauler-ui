@@ -13,6 +13,7 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/manifests"
 	"github.com/hauler-ui/hauler-ui/backend/internal/registry"
 	"github.com/hauler-ui/hauler-ui/backend/internal/serve"
+	"github.com/hauler-ui/hauler-ui/backend/internal/settings"
 	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
 	"github.com/hauler-ui/hauler-ui/backend/internal/store"
 )
@@ -49,6 +50,9 @@ func main() {
 	// Initialize serve handler
 	serveHandler := serve.NewHandler(cfg, db.DB)
 
+	// Initialize settings handler
+	settingsHandler := settings.NewHandler(db.DB)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
@@ -68,6 +72,9 @@ func main() {
 
 	// Serve endpoints
 	serveHandler.RegisterRoutes(mux)
+
+	// Settings endpoints
+	settingsHandler.RegisterRoutes(mux)
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {

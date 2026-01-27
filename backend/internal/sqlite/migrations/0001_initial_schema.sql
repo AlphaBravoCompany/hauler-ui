@@ -64,3 +64,4 @@ INSERT OR IGNORE INTO settings (key, value, description) VALUES ('retries', '0',
 INSERT OR IGNORE INTO settings (key, value, description) VALUES ('ignore_errors', 'false', 'Continue operations even when errors occur');
 INSERT OR IGNORE INTO settings (key, value, description) VALUES ('default_platform', '', 'Default platform for multi-platform operations');
 INSERT OR IGNORE INTO settings (key, value, description) VALUES ('default_key_path', '', 'Default path to cosign private key');
+INSERT OR IGNORE INTO settings (key, value, description) VALUES ('temp_dir', '', 'Temporary directory for hauler operations');
