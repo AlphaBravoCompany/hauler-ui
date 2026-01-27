@@ -7,10 +7,19 @@ import (
 	"time"
 
 	"github.com/hauler-ui/hauler-ui/backend/internal/config"
+	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
 )
 
 func main() {
 	cfg := config.Load()
+
+	// Initialize SQLite database
+	db, err := sqlite.Open(cfg.DatabasePath)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+	log.Printf("Database initialized: %s", cfg.DatabasePath)
 
 	mux := http.NewServeMux()
 

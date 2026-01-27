@@ -18,6 +18,9 @@ type Config struct {
 
 	// DockerAuthPath is where registry credentials are stored (default: /data/.docker/config.json)
 	DockerAuthPath string
+
+	// DatabasePath is the SQLite database file path (default: /data/app.db)
+	DatabasePath string
 }
 
 // Load returns the application configuration from environment variables
@@ -32,6 +35,7 @@ func Load() *Config {
 		HaulerStoreDir: getEnv("HAULER_STORE_DIR", filepath.Join(haulerDir, "store")),
 		HaulerTempDir:  getEnv("HAULER_TEMP_DIR", filepath.Join(haulerDir, "tmp")),
 		DockerAuthPath: filepath.Join(dockerConfig, "config.json"),
+		DatabasePath:   getEnv("DATABASE_PATH", filepath.Join(haulerDir, "app.db")),
 	}
 }
 
@@ -50,9 +54,11 @@ func (c *Config) ToMap() map[string]string {
 		"haulerStoreDir":  c.HaulerStoreDir,
 		"haulerTempDir":   c.HaulerTempDir,
 		"dockerAuthPath":  c.DockerAuthPath,
+		"databasePath":    c.DatabasePath,
 		"haulerDirEnv":    "HAULER_DIR",
 		"haulerStoreEnv":  "HAULER_STORE_DIR",
 		"haulerTempEnv":   "HAULER_TEMP_DIR",
 		"dockerConfigEnv": "DOCKER_CONFIG",
+		"databasePathEnv": "DATABASE_PATH",
 	}
 }
