@@ -38,7 +38,7 @@ test: test-backend test-frontend
 
 # Lint backend
 lint-backend:
-	@cd backend && (golangci-lint run --exclude=errcheck || echo "golangci-lint not installed, skipping backend lint")
+	cd backend && golangci-lint run --disable=errcheck
 
 # Lint frontend
 lint-frontend:
