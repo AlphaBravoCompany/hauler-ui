@@ -249,7 +249,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "US-003",
         "US-006"
@@ -509,6 +509,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-01-27T17:27:00.257Z"
+    "updatedAt": "2026-01-27T17:27:01.355Z"
   }
 }
