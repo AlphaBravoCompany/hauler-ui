@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T15:37:03.075Z",
-  "currentIteration": 4,
+  "updatedAt": "2026-01-27T16:56:07.924Z",
+  "currentIteration": 5,
   "maxIterations": 150,
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -41,8 +41,8 @@
       {
         "id": "US-005",
         "title": "Detect installed hauler version + capabilities",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-006",
@@ -200,6 +200,16 @@
       "durationMs": 335827,
       "startedAt": "2026-01-27T15:25:17.702Z",
       "endedAt": "2026-01-27T15:30:53.529Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "US-005",
+      "taskTitle": "Detect installed hauler version + capabilities",
+      "taskCompleted": true,
+      "durationMs": 368494,
+      "startedAt": "2026-01-27T15:30:54.577Z",
+      "endedAt": "2026-01-27T15:37:03.071Z"
     }
   ],
   "skippedTaskIds": [],
