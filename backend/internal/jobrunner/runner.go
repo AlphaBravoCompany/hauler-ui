@@ -36,6 +36,7 @@ type Job struct {
 	StartedAt    *time.Time
 	CompletedAt  *time.Time
 	CreatedAt    time.Time
+	Result       sql.NullString
 }
 
 // LogEntry represents a single log line
@@ -244,6 +245,11 @@ func (r *Runner) appendLog(ctx context.Context, jobID int64, stream, content str
 
 // updateStatus updates the job status in the database
 func (r *Runner) updateStatus(ctx context.Context, jobID int64, status JobStatus, startedAt, completedAt *time.Time, exitCode *int) error {
+	return r.updateStatusWithResult(ctx, jobID, status, startedAt, completedAt, exitCode, "")
+}
+
+// updateStatusWithResult updates the job status and result in the database
+func (r *Runner) updateStatusWithResult(ctx context.Context, jobID int64, status JobStatus, startedAt, completedAt *time.Time, exitCode *int, result string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -265,6 +271,11 @@ func (r *Runner) updateStatus(ctx context.Context, jobID int64, status JobStatus
 		args = append(args, *exitCode)
 	}
 
+	if result != "" {
+		query += `, result = ?`
+		args = append(args, result)
+	}
+
 	query += ` WHERE id = ?`
 	args = append(args, jobID)
 
@@ -272,20 +283,29 @@ func (r *Runner) updateStatus(ctx context.Context, jobID int64, status JobStatus
 	return err
 }
 
+// UpdateResult updates just the result field for a job
+func (r *Runner) UpdateResult(ctx context.Context, jobID int64, result string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, err := r.db.ExecContext(ctx, `UPDATE jobs SET result = ? WHERE id = ?`, result, jobID)
+	return err
+}
+
 // GetJob retrieves a job by ID
 func (r *Runner) GetJob(ctx context.Context, jobID int64) (*Job, error) {
 	var job Job
-	var argsJSON, envJSON sql.NullString
+	var argsJSON, envJSON, resultJSON sql.NullString
 	var exitCode sql.NullInt64
 	var startedAt, completedAt sql.NullTime
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, command, args, env_overrides, status, exit_code, started_at, completed_at, created_at
+		`SELECT id, command, args, env_overrides, status, exit_code, started_at, completed_at, created_at, result
 		 FROM jobs WHERE id = ?`,
 		jobID,
 	).Scan(
 		&job.ID, &job.Command, &argsJSON, &envJSON, &job.Status,
-		&exitCode, &startedAt, &completedAt, &job.CreatedAt,
+		&exitCode, &startedAt, &completedAt, &job.CreatedAt, &resultJSON,
 	)
 	if err != nil {
 		return nil, err
@@ -298,6 +318,8 @@ func (r *Runner) GetJob(ctx context.Context, jobID int64) (*Job, error) {
 	if envJSON.Valid {
 		_ = json.Unmarshal([]byte(envJSON.String), &job.EnvOverrides)
 	}
+
+	job.Result = resultJSON
 
 	if exitCode.Valid {
 		code := int(exitCode.Int64)
@@ -346,7 +368,7 @@ func (r *Runner) GetLogs(ctx context.Context, jobID int64, since *time.Time) ([]
 
 // ListJobs retrieves all jobs, optionally filtered by status
 func (r *Runner) ListJobs(ctx context.Context, status *JobStatus) ([]Job, error) {
-	query := `SELECT id, command, args, env_overrides, status, exit_code, started_at, completed_at, created_at
+	query := `SELECT id, command, args, env_overrides, status, exit_code, started_at, completed_at, created_at, result
 	          FROM jobs`
 	args := []interface{}{}
 
@@ -366,13 +388,13 @@ func (r *Runner) ListJobs(ctx context.Context, status *JobStatus) ([]Job, error)
 	var jobs []Job
 	for rows.Next() {
 		var job Job
-		var argsJSON, envJSON sql.NullString
+		var argsJSON, envJSON, resultJSON sql.NullString
 		var exitCode sql.NullInt64
 		var startedAt, completedAt sql.NullTime
 
 		if err := rows.Scan(
 			&job.ID, &job.Command, &argsJSON, &envJSON, &job.Status,
-			&exitCode, &startedAt, &completedAt, &job.CreatedAt,
+			&exitCode, &startedAt, &completedAt, &job.CreatedAt, &resultJSON,
 		); err != nil {
 			return nil, err
 		}
@@ -384,6 +406,8 @@ func (r *Runner) ListJobs(ctx context.Context, status *JobStatus) ([]Job, error)
 		if envJSON.Valid {
 			_ = json.Unmarshal([]byte(envJSON.String), &job.EnvOverrides)
 		}
+
+		job.Result = resultJSON
 
 		if exitCode.Valid {
 			code := int(exitCode.Int64)

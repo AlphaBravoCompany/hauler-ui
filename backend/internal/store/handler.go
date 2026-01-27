@@ -1,12 +1,17 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/hauler-ui/hauler-ui/backend/internal/config"
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
@@ -459,10 +464,223 @@ func (h *Handler) Sync(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"jobId":    job.ID,
-		"message":  "Sync job started",
+		"jobId":     job.ID,
+		"message":   "Sync job started",
 		"filenames": filenames,
 	})
+}
+
+// SaveRequest represents the request to save the store to an archive
+type SaveRequest struct {
+	Filename    string `json:"filename,omitempty"`
+	Platform    string `json:"platform,omitempty"`
+	Containerd  string `json:"containerd,omitempty"`
+}
+
+// Save handles POST /api/store/save
+func (h *Handler) Save(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req SaveRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Default filename if not provided
+	filename := req.Filename
+	if filename == "" {
+		filename = "haul.tar.zst"
+	}
+
+	// Build args for hauler store save command
+	args := []string{"store", "save", "--filename", filename}
+
+	// Optional platform
+	if req.Platform != "" {
+		args = append(args, "--platform", req.Platform)
+	}
+
+	// Optional containerd target
+	if req.Containerd != "" {
+		args = append(args, "--containerd", req.Containerd)
+	}
+
+	// Resolve the full path of the archive for later download
+	archivePath := filename
+	if !filepath.IsAbs(filename) {
+		// If relative, it will be in the current working directory
+		// For predictability, we'll use the data directory
+		archivePath = filepath.Join(h.cfg.DataDir, filename)
+	}
+
+	// Store metadata for post-job processing
+	saveMetadata := map[string]interface{}{
+		"filename":    filename,
+		"archivePath": archivePath,
+	}
+	metadataJSON, _ := json.Marshal(saveMetadata)
+
+	// Create a job with the metadata in env overrides for later retrieval
+	job, err := h.jobRunner.CreateJob(r.Context(), "hauler", args, map[string]string{
+		"HAULER_SAVE_METADATA": string(metadataJSON),
+	})
+	if err != nil {
+		log.Printf("Error creating save job: %v", err)
+		http.Error(w, "Failed to create save job", http.StatusInternalServerError)
+		return
+	}
+
+	// Start the job in background with result tracking
+	go h.runSaveJob(r.Context(), job.ID, archivePath)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"jobId":    job.ID,
+		"message":  "Save job started",
+		"filename": filename,
+	})
+}
+
+// runSaveJob starts a save job and updates the result with archive path on success
+func (h *Handler) runSaveJob(ctx context.Context, jobID int64, archivePath string) {
+	if err := h.jobRunner.Start(ctx, jobID); err != nil {
+		log.Printf("Error starting save job %d: %v", jobID, err)
+		return
+	}
+
+	// Wait a moment for the job to complete, then update result
+	// In production, this would be better handled with a completion callback
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			job, err := h.jobRunner.GetJob(ctx, jobID)
+			if err != nil {
+				return
+			}
+
+			if job.Status == jobrunner.StatusSucceeded {
+				// Verify the archive exists
+				if _, err := os.Stat(archivePath); err == nil {
+					result := map[string]interface{}{
+						"archivePath": archivePath,
+						"filename":    filepath.Base(archivePath),
+					}
+					resultJSON, _ := json.Marshal(result)
+					_ = h.jobRunner.UpdateResult(ctx, jobID, string(resultJSON))
+				}
+				return
+			}
+
+			if job.Status == jobrunner.StatusFailed {
+				return
+			}
+		}
+	}()
+}
+
+// ServeDownload handles GET /api/downloads/{filename} for downloading saved archives
+func (h *Handler) ServeDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract filename from path
+	// Path format: /api/downloads/{filename}
+	prefix := "/api/downloads/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		http.Error(w, "Invalid download path", http.StatusBadRequest)
+		return
+	}
+
+	filename := strings.TrimPrefix(r.URL.Path, prefix)
+	if filename == "" {
+		http.Error(w, "Filename required", http.StatusBadRequest)
+		return
+	}
+
+	// Security: ensure filename doesn't contain path traversal
+	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	// Build the full path to the archive
+	archivePath := filepath.Join(h.cfg.DataDir, filename)
+
+	// Check if file exists
+	fileInfo, err := os.Stat(archivePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "File not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Error accessing file", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Open the file
+	file, err := os.Open(archivePath)
+	if err != nil {
+		http.Error(w, "Error opening file", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	// Set headers for download
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
+
+	// Support range requests
+	w.Header().Set("Accept-Ranges", "bytes")
+
+	// Handle range request if present
+	rangeHeader := r.Header.Get("Range")
+	if rangeHeader != "" {
+		// Parse Range header (format: bytes=start-end)
+		if strings.HasPrefix(rangeHeader, "bytes=") {
+			rangeSpec := strings.TrimPrefix(rangeHeader, "bytes=")
+			parts := strings.Split(rangeSpec, "-")
+			if len(parts) == 2 {
+				var start, end int64
+				if parts[0] != "" {
+					start, _ = strconv.ParseInt(parts[0], 10, 64)
+				}
+				if parts[1] != "" {
+					end, _ = strconv.ParseInt(parts[1], 10, 64)
+				} else {
+					end = fileInfo.Size() - 1
+				}
+
+				if start >= 0 && end >= start && end < fileInfo.Size() {
+					w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, fileInfo.Size()))
+					w.Header().Set("Content-Length", fmt.Sprintf("%d", end-start+1))
+					w.WriteHeader(http.StatusPartialContent)
+
+					_, _ = file.Seek(start, 0)
+					_, err = io.CopyN(w, file, end-start+1)
+					if err != nil {
+						log.Printf("Error serving file range: %v", err)
+					}
+					return
+				}
+			}
+		}
+	}
+
+	// Serve entire file
+	_, err = io.Copy(w, file)
+	if err != nil {
+		log.Printf("Error serving file: %v", err)
+	}
 }
 
 // RegisterRoutes registers the store routes with the given mux
@@ -471,4 +689,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/add-chart", h.AddChart)
 	mux.HandleFunc("/api/store/add-file", h.AddFile)
 	mux.HandleFunc("/api/store/sync", h.Sync)
+	mux.HandleFunc("/api/store/save", h.Save)
+	mux.HandleFunc("/api/downloads/", h.ServeDownload)
 }

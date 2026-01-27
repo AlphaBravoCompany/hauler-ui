@@ -4,6 +4,7 @@ import StoreAddImage from './pages/StoreAddImage.jsx'
 import StoreAddChart from './pages/StoreAddChart.jsx'
 import StoreAddFile from './pages/StoreAddFile.jsx'
 import StoreSync from './pages/StoreSync.jsx'
+import StoreSave from './pages/StoreSave.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -851,6 +852,37 @@ function JobDetail() {
         </div>
       )}
 
+      {/* Show download link for store save jobs */}
+      {job.status === 'succeeded' && job.result && (() => {
+        try {
+          const result = JSON.parse(job.result)
+          if (result.archivePath && result.filename) {
+            return (
+              <div className="card" style={{ borderColor: 'var(--accent-green)' }}>
+                <div className="card-title" style={{ color: 'var(--accent-green)' }}>
+                  Archive Ready
+                </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                  <p style={{ marginBottom: '0.5rem' }}>
+                    <strong>Archive path:</strong> <code>{result.archivePath}</code>
+                  </p>
+                  <a
+                    href={`/api/downloads/${result.filename}`}
+                    className="btn btn-primary"
+                    download
+                  >
+                    Download {result.filename}
+                  </a>
+                </div>
+              </div>
+            )
+          }
+        } catch {
+          return null
+        }
+        return null
+      })()}
+
       <div className="card">
         <div className="card-title">Output</div>
         <div className="terminal-output">
@@ -908,6 +940,7 @@ function App() {
                 <Route path="/store/add-file" element={<StoreAddFile />} />
                 <Route path="/store/sync" element={<StoreSync />} />
                 <Route path="/store/sync/:manifestId" element={<StoreSync />} />
+                <Route path="/store/save" element={<StoreSave />} />
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />

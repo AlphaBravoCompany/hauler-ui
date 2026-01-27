@@ -40,7 +40,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			exit_code INTEGER,
 			started_at DATETIME,
 			completed_at DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			result TEXT
 		);
 
 		CREATE TABLE IF NOT EXISTS job_logs (

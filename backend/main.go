@@ -101,11 +101,11 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, "/app/web/index.html")
+		http.ServeFile(w, r, "./web/dist/index.html")
 	})
 
 	// Serve static files from web build directory
-	fs := http.FileServer(http.Dir("/app/web"))
+	fs := http.FileServer(http.Dir("./web/dist"))
 	mux.Handle("/assets/", fs)
 
 	server := &http.Server{

@@ -21,6 +21,9 @@ type Config struct {
 
 	// DatabasePath is the SQLite database file path (default: /data/app.db)
 	DatabasePath string
+
+	// DataDir is the base data directory (same as HaulerDir for downloads)
+	DataDir string
 }
 
 // Load returns the application configuration from environment variables
@@ -36,6 +39,7 @@ func Load() *Config {
 		HaulerTempDir:  getEnv("HAULER_TEMP_DIR", filepath.Join(haulerDir, "tmp")),
 		DockerAuthPath: filepath.Join(dockerConfig, "config.json"),
 		DatabasePath:   getEnv("DATABASE_PATH", filepath.Join(haulerDir, "app.db")),
+		DataDir:        haulerDir,
 	}
 }
 

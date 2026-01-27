@@ -24,8 +24,8 @@ func TestMigrationsApplyOnEmptyDB(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationCount); err != nil {
 		t.Fatalf("Failed to query schema_migrations: %v", err)
 	}
-	if migrationCount != 1 {
-		t.Errorf("Expected 1 migration, got %d", migrationCount)
+	if migrationCount != 2 {
+		t.Errorf("Expected 2 migrations, got %d", migrationCount)
 	}
 
 	// Verify all tables exist
@@ -65,8 +65,8 @@ func TestMigrationsIdempotent(t *testing.T) {
 	if err := db2.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationCount); err != nil {
 		t.Fatalf("Failed to query schema_migrations: %v", err)
 	}
-	if migrationCount != 1 {
-		t.Errorf("Expected 1 migration after reopen, got %d", migrationCount)
+	if migrationCount != 2 {
+		t.Errorf("Expected 2 migrations after reopen, got %d", migrationCount)
 	}
 }
 
@@ -120,7 +120,8 @@ func TestJobsTableSchema(t *testing.T) {
 
 	var command string
 	var status string
-	if err := db.QueryRow("SELECT command, status FROM jobs WHERE id = ?", id).Scan(&command, &status); err != nil {
+	var resultCol sql.NullString
+	if err := db.QueryRow("SELECT command, status, result FROM jobs WHERE id = ?", id).Scan(&command, &status, &resultCol); err != nil {
 		t.Fatalf("Failed to query job: %v", err)
 	}
 
