@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
+  "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
   "status": "running",
-  "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T17:44:19.905Z",
-  "currentIteration": 12,
+  "startedAt": "2026-01-27T18:52:38.600Z",
+  "updatedAt": "2026-01-27T18:58:58.721Z",
+  "currentIteration": 0,
   "maxIterations": 150,
-  "tasksCompleted": 12,
+  "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -18,78 +18,78 @@
         "id": "US-001",
         "title": "Repo scaffold: backend+frontend+docker skeleton",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-002",
         "title": "Container persistence model for Hauler dirs",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-003",
         "title": "SQLite schema + migrations for UI state",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-004",
         "title": "Job runner that executes hauler CLI and streams logs",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-005",
         "title": "Detect installed hauler version + capabilities",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-006",
         "title": "Frontend shell: navigation + job console",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-007",
         "title": "Registry login UI (hauler login) + secure handling",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-008",
         "title": "Store overview page (read-only): current paths + basic info",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-009",
         "title": "Store Add Image workflow (hauler store add image)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-010",
         "title": "Store Add Chart workflow (hauler store add chart)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-011",
         "title": "Store Add File workflow (hauler store add file)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-012",
         "title": "Manifest library CRUD (YAML editor + saved manifests)",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-013",
         "title": "Store Sync workflow (hauler store sync --filename ...)",
-        "status": "open",
+        "status": "completed",
         "completedInSession": false
       },
       {
@@ -160,128 +160,7 @@
       }
     ]
   },
-  "iterations": [
-    {
-      "iteration": 1,
-      "status": "completed",
-      "taskId": "US-001",
-      "taskTitle": "Repo scaffold: backend+frontend+docker skeleton",
-      "taskCompleted": true,
-      "durationMs": 74492,
-      "startedAt": "2026-01-27T15:16:21.899Z",
-      "endedAt": "2026-01-27T15:17:36.391Z"
-    },
-    {
-      "iteration": 2,
-      "status": "completed",
-      "taskId": "US-002",
-      "taskTitle": "Container persistence model for Hauler dirs",
-      "taskCompleted": true,
-      "durationMs": 198229,
-      "startedAt": "2026-01-27T15:17:37.457Z",
-      "endedAt": "2026-01-27T15:20:55.686Z"
-    },
-    {
-      "iteration": 3,
-      "status": "completed",
-      "taskId": "US-003",
-      "taskTitle": "SQLite schema + migrations for UI state",
-      "taskCompleted": true,
-      "durationMs": 259929,
-      "startedAt": "2026-01-27T15:20:56.727Z",
-      "endedAt": "2026-01-27T15:25:16.656Z"
-    },
-    {
-      "iteration": 4,
-      "status": "completed",
-      "taskId": "US-004",
-      "taskTitle": "Job runner that executes hauler CLI and streams logs",
-      "taskCompleted": true,
-      "durationMs": 335827,
-      "startedAt": "2026-01-27T15:25:17.702Z",
-      "endedAt": "2026-01-27T15:30:53.529Z"
-    },
-    {
-      "iteration": 5,
-      "status": "completed",
-      "taskId": "US-005",
-      "taskTitle": "Detect installed hauler version + capabilities",
-      "taskCompleted": true,
-      "durationMs": 368494,
-      "startedAt": "2026-01-27T15:30:54.577Z",
-      "endedAt": "2026-01-27T15:37:03.071Z"
-    },
-    {
-      "iteration": 6,
-      "status": "completed",
-      "taskId": "US-006",
-      "taskTitle": "Frontend shell: navigation + job console",
-      "taskCompleted": true,
-      "durationMs": 4743793,
-      "startedAt": "2026-01-27T15:37:04.124Z",
-      "endedAt": "2026-01-27T16:56:07.917Z"
-    },
-    {
-      "iteration": 7,
-      "status": "completed",
-      "taskId": "US-007",
-      "taskTitle": "Registry login UI (hauler login) + secure handling",
-      "taskCompleted": true,
-      "durationMs": 440139,
-      "startedAt": "2026-01-27T16:56:09.052Z",
-      "endedAt": "2026-01-27T17:03:29.191Z"
-    },
-    {
-      "iteration": 8,
-      "status": "completed",
-      "taskId": "US-008",
-      "taskTitle": "Store overview page (read-only): current paths + basic info",
-      "taskCompleted": true,
-      "durationMs": 339658,
-      "startedAt": "2026-01-27T17:03:30.277Z",
-      "endedAt": "2026-01-27T17:09:09.935Z"
-    },
-    {
-      "iteration": 9,
-      "status": "completed",
-      "taskId": "US-009",
-      "taskTitle": "Store Add Image workflow (hauler store add image)",
-      "taskCompleted": true,
-      "durationMs": 453956,
-      "startedAt": "2026-01-27T17:09:11.005Z",
-      "endedAt": "2026-01-27T17:16:44.961Z"
-    },
-    {
-      "iteration": 10,
-      "status": "completed",
-      "taskId": "US-010",
-      "taskTitle": "Store Add Chart workflow (hauler store add chart)",
-      "taskCompleted": true,
-      "durationMs": 280917,
-      "startedAt": "2026-01-27T17:16:46.082Z",
-      "endedAt": "2026-01-27T17:21:26.999Z"
-    },
-    {
-      "iteration": 11,
-      "status": "completed",
-      "taskId": "US-011",
-      "taskTitle": "Store Add File workflow (hauler store add file)",
-      "taskCompleted": true,
-      "durationMs": 332184,
-      "startedAt": "2026-01-27T17:21:28.069Z",
-      "endedAt": "2026-01-27T17:27:00.253Z"
-    },
-    {
-      "iteration": 12,
-      "status": "completed",
-      "taskId": "US-012",
-      "taskTitle": "Manifest library CRUD (YAML editor + saved manifests)",
-      "taskCompleted": true,
-      "durationMs": 463041,
-      "startedAt": "2026-01-27T17:27:01.355Z",
-      "endedAt": "2026-01-27T17:34:44.396Z"
-    }
-  ],
+  "iterations": [],
   "skippedTaskIds": [],
   "cwd": "/home/roughneck/projects/hauler-ui",
   "activeTaskIds": [],
