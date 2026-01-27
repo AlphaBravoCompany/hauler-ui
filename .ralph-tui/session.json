@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T16:56:07.924Z",
-  "currentIteration": 5,
+  "updatedAt": "2026-01-27T17:03:29.198Z",
+  "currentIteration": 6,
   "maxIterations": 150,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -47,8 +47,8 @@
       {
         "id": "US-006",
         "title": "Frontend shell: navigation + job console",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-007",
@@ -210,6 +210,16 @@
       "durationMs": 368494,
       "startedAt": "2026-01-27T15:30:54.577Z",
       "endedAt": "2026-01-27T15:37:03.071Z"
+    },
+    {
+      "iteration": 6,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Frontend shell: navigation + job console",
+      "taskCompleted": true,
+      "durationMs": 4743793,
+      "startedAt": "2026-01-27T15:37:04.124Z",
+      "endedAt": "2026-01-27T16:56:07.917Z"
     }
   ],
   "skippedTaskIds": [],
