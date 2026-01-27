@@ -3,10 +3,10 @@
   "sessionId": "81a4205d-1d38-4f21-b8e1-821308edab05",
   "status": "running",
   "startedAt": "2026-01-27T18:52:38.600Z",
-  "updatedAt": "2026-01-27T18:58:58.721Z",
-  "currentIteration": 0,
+  "updatedAt": "2026-01-27T19:04:35.443Z",
+  "currentIteration": 1,
   "maxIterations": 150,
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -95,8 +95,8 @@
       {
         "id": "US-014",
         "title": "Store Save workflow (hauler store save --filename ...)",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-015",
@@ -160,7 +160,18 @@
       }
     ]
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-014",
+      "taskTitle": "Store Save workflow (hauler store save --filename ...)",
+      "taskCompleted": true,
+      "durationMs": 377832,
+      "startedAt": "2026-01-27T18:52:40.879Z",
+      "endedAt": "2026-01-27T18:58:58.711Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/home/roughneck/projects/hauler-ui",
   "activeTaskIds": [],
