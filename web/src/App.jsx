@@ -8,6 +8,7 @@ import StoreSave from './pages/StoreSave.jsx'
 import StoreLoad from './pages/StoreLoad.jsx'
 import StoreExtract from './pages/StoreExtract.jsx'
 import StoreCopy from './pages/StoreCopy.jsx'
+import ServeRegistry from './pages/ServeRegistry.jsx'
 import Manifests from './pages/Manifests.jsx'
 import './App.css'
 
@@ -415,9 +416,35 @@ function Serve() {
           <p className="page-subtitle">Serve content from your store</p>
         </div>
       </div>
-      <div className="empty-state">
-        <div className="empty-state-icon">🌐</div>
-        <div className="empty-state-text">Serve operations coming soon</div>
+
+      <div className="card">
+        <div className="card-title">Serve Options</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+          <NavLink to="/serve/registry" className="operation-card" style={{ textDecoration: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>📦</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Registry</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Start an embedded container registry
+                </div>
+              </div>
+            </div>
+          </NavLink>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '1rem' }}>
+        <div className="card-title">About Serve</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+          <p style={{ marginBottom: '0.75rem' }}>
+            The serve functionality allows you to expose your hauler store content via
+            embedded servers that can be accessed by other tools.
+          </p>
+          <p style={{ marginBottom: '0' }}>
+            Select a serve type above to configure and start a server.
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -966,6 +993,7 @@ function App() {
                 <Route path="/manifests" element={<Manifests />} />
                 <Route path="/hauls" element={<Hauls />} />
                 <Route path="/serve" element={<Serve />} />
+                <Route path="/serve/registry" element={<ServeRegistry />} />
                 <Route path="/copy" element={<CopyExport />} />
                 <Route path="/registry" element={<RegistryLogin />} />
                 <Route path="/settings" element={<Settings />} />

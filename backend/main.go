@@ -12,6 +12,7 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
 	"github.com/hauler-ui/hauler-ui/backend/internal/manifests"
 	"github.com/hauler-ui/hauler-ui/backend/internal/registry"
+	"github.com/hauler-ui/hauler-ui/backend/internal/serve"
 	"github.com/hauler-ui/hauler-ui/backend/internal/sqlite"
 	"github.com/hauler-ui/hauler-ui/backend/internal/store"
 )
@@ -45,6 +46,9 @@ func main() {
 	// Initialize manifests handler
 	manifestsHandler := manifests.NewHandler(db.DB)
 
+	// Initialize serve handler
+	serveHandler := serve.NewHandler(cfg, db.DB)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
@@ -61,6 +65,9 @@ func main() {
 
 	// Manifests endpoints
 	manifestsHandler.RegisterRoutes(mux)
+
+	// Serve endpoints
+	serveHandler.RegisterRoutes(mux)
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {
