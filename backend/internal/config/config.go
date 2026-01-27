@@ -24,6 +24,9 @@ type Config struct {
 
 	// DataDir is the base data directory (same as HaulerDir for downloads)
 	DataDir string
+
+	// UIPassword is the optional password for UI access (default: empty, no auth)
+	UIPassword string
 }
 
 // Load returns the application configuration from environment variables
@@ -40,6 +43,7 @@ func Load() *Config {
 		DockerAuthPath: filepath.Join(dockerConfig, "config.json"),
 		DatabasePath:   getEnv("DATABASE_PATH", filepath.Join(haulerDir, "app.db")),
 		DataDir:        haulerDir,
+		UIPassword:     getEnv("HAULER_UI_PASSWORD", ""),
 	}
 }
 
@@ -64,5 +68,14 @@ func (c *Config) ToMap() map[string]string {
 		"haulerTempEnv":   "HAULER_TEMP_DIR",
 		"dockerConfigEnv": "DOCKER_CONFIG",
 		"databasePathEnv": "DATABASE_PATH",
+		"authEnabled":     boolToString(c.UIPassword != ""),
 	}
+}
+
+// boolToString converts a bool to "true" or "false" string
+func boolToString(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }

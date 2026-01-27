@@ -24,12 +24,12 @@ func TestMigrationsApplyOnEmptyDB(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationCount); err != nil {
 		t.Fatalf("Failed to query schema_migrations: %v", err)
 	}
-	if migrationCount != 2 {
-		t.Errorf("Expected 2 migrations, got %d", migrationCount)
+	if migrationCount != 3 {
+		t.Errorf("Expected 3 migrations, got %d", migrationCount)
 	}
 
 	// Verify all tables exist
-	tables := []string{"settings", "jobs", "job_logs", "saved_manifests", "serve_processes"}
+	tables := []string{"settings", "jobs", "job_logs", "saved_manifests", "serve_processes", "sessions"}
 	for _, table := range tables {
 		var count int
 		if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&count); err != nil {
@@ -65,8 +65,8 @@ func TestMigrationsIdempotent(t *testing.T) {
 	if err := db2.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationCount); err != nil {
 		t.Fatalf("Failed to query schema_migrations: %v", err)
 	}
-	if migrationCount != 2 {
-		t.Errorf("Expected 2 migrations after reopen, got %d", migrationCount)
+	if migrationCount != 3 {
+		t.Errorf("Expected 3 migrations after reopen, got %d", migrationCount)
 	}
 }
 
@@ -285,5 +285,47 @@ func TestDatabasePathCreation(t *testing.T) {
 	// Verify the database file was created
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		t.Errorf("Database file was not created at %s", dbPath)
+	}
+}
+
+func TestSessionsTableSchema(t *testing.T) {
+	// Create a temporary database file
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+
+	db, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// Test inserting and querying a session
+	result, err := db.Exec("INSERT INTO sessions (token, expires_at) VALUES (?, datetime('now', '+24 hours'))",
+		"test-session-token-12345")
+	if err != nil {
+		t.Fatalf("Failed to insert session: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("Failed to get last insert id: %v", err)
+	}
+
+	var token string
+	if err := db.QueryRow("SELECT token FROM sessions WHERE id = ?", id).Scan(&token); err != nil {
+		t.Fatalf("Failed to query session: %v", err)
+	}
+
+	if token != "test-session-token-12345" {
+		t.Errorf("Expected token 'test-session-token-12345', got '%s'", token)
+	}
+
+	// Verify the index exists
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_sessions_token'").Scan(&count); err != nil {
+		t.Fatalf("Failed to check for index: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Index idx_sessions_token does not exist")
 	}
 }

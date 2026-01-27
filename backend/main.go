@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/hauler-ui/hauler-ui/backend/internal/auth"
 	"github.com/hauler-ui/hauler-ui/backend/internal/config"
 	"github.com/hauler-ui/hauler-ui/backend/internal/hauler"
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
@@ -53,10 +54,17 @@ func main() {
 	// Initialize settings handler
 	settingsHandler := settings.NewHandler(db.DB)
 
+	// Initialize auth manager and handler
+	authManager := auth.NewManager(db.DB, cfg)
+	authHandler := auth.NewHandler(authManager)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/api/config", configHandler(cfg))
+
+	// Auth endpoints (public)
+	authHandler.RegisterRoutes(mux)
 
 	// Hauler capabilities endpoints
 	haulerHandler.RegisterRoutes(mux)
@@ -122,9 +130,12 @@ func main() {
 	fs := http.FileServer(http.Dir("./web/dist"))
 	mux.Handle("/assets/", fs)
 
+	// Wrap mux with auth middleware
+	handlerWithAuth := authManager.Middleware(mux)
+
 	server := &http.Server{
 		Addr:        ":8080",
-		Handler:     mux,
+		Handler:     handlerWithAuth,
 		ReadTimeout: 5 * time.Second,
 	}
 

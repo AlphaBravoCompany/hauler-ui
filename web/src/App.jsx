@@ -12,7 +12,75 @@ import StoreRemove from './pages/StoreRemove.jsx'
 import ServeRegistry from './pages/ServeRegistry.jsx'
 import ServeFileserver from './pages/ServeFileserver.jsx'
 import Manifests from './pages/Manifests.jsx'
+import Login from './pages/Login.jsx'
 import './App.css'
+
+// === Context for Auth ===
+const AuthContext = createContext()
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
+}
+
+function AuthProvider({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authEnabled, setAuthEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/validate')
+      if (res.ok) {
+        const data = await res.json()
+        setIsAuthenticated(data.authenticated)
+        setAuthEnabled(data.authEnabled)
+      }
+    } catch (err) {
+      console.error('Failed to check auth status:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  const login = async (password) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.success) {
+        setIsAuthenticated(true)
+        return true
+      }
+    }
+    return false
+  }
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
+    setIsAuthenticated(false)
+  }
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, authEnabled, loading, login, logout, checkAuth }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
 
 // === Context for Jobs ===
 const JobsContext = createContext()
@@ -970,6 +1038,14 @@ function JobDetail() {
 // === Main App ===
 
 function TopBar() {
+  const { logout, authEnabled } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
   return (
     <div className="top-bar">
       <div className="top-bar-left">
@@ -977,48 +1053,89 @@ function TopBar() {
       </div>
       <div className="top-bar-right">
         <JobIndicator />
+        {authEnabled && (
+          <button className="btn btn-sm" onClick={handleLogout} style={{ marginLeft: '0.5rem' }}>
+            Logout
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, authEnabled, loading } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!loading) {
+      if (authEnabled && !isAuthenticated) {
+        navigate('/login')
+      }
+    }
+  }, [isAuthenticated, authEnabled, loading, navigate])
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="loading">Loading...</div>
+      </div>
+    )
+  }
+
+  if (authEnabled && !isAuthenticated) {
+    return null // Will redirect via useEffect
+  }
+
+  return children
+}
+
 function App() {
   return (
     <Router>
-      <JobsProvider>
-        <div className="App">
-          <Sidebar />
-          <div className="main-wrapper">
-            <TopBar />
-            <main className="main-content">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/store" element={<Store />} />
-                <Route path="/store/add" element={<StoreAddImage />} />
-                <Route path="/store/add-chart" element={<StoreAddChart />} />
-                <Route path="/store/add-file" element={<StoreAddFile />} />
-                <Route path="/store/sync" element={<StoreSync />} />
-                <Route path="/store/sync/:manifestId" element={<StoreSync />} />
-                <Route path="/store/save" element={<StoreSave />} />
-                <Route path="/store/load" element={<StoreLoad />} />
-                <Route path="/store/extract" element={<StoreExtract />} />
-                <Route path="/store/copy" element={<StoreCopy />} />
-                <Route path="/store/remove" element={<StoreRemove />} />
-                <Route path="/manifests" element={<Manifests />} />
-                <Route path="/hauls" element={<Hauls />} />
-                <Route path="/serve" element={<Serve />} />
-                <Route path="/serve/registry" element={<ServeRegistry />} />
-                <Route path="/serve/fileserver" element={<ServeFileserver />} />
-                <Route path="/copy" element={<CopyExport />} />
-                <Route path="/registry" element={<RegistryLogin />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/jobs" element={<JobHistory />} />
-                <Route path="/jobs/:id" element={<JobDetail />} />
-              </Routes>
-            </main>
-          </div>
-        </div>
-      </JobsProvider>
+      <AuthProvider>
+        <JobsProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={
+              <ProtectedRoute>
+                <div className="App">
+                  <Sidebar />
+                  <div className="main-wrapper">
+                    <TopBar />
+                    <main className="main-content">
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/store" element={<Store />} />
+                        <Route path="/store/add" element={<StoreAddImage />} />
+                        <Route path="/store/add-chart" element={<StoreAddChart />} />
+                        <Route path="/store/add-file" element={<StoreAddFile />} />
+                        <Route path="/store/sync" element={<StoreSync />} />
+                        <Route path="/store/sync/:manifestId" element={<StoreSync />} />
+                        <Route path="/store/save" element={<StoreSave />} />
+                        <Route path="/store/load" element={<StoreLoad />} />
+                        <Route path="/store/extract" element={<StoreExtract />} />
+                        <Route path="/store/copy" element={<StoreCopy />} />
+                        <Route path="/store/remove" element={<StoreRemove />} />
+                        <Route path="/manifests" element={<Manifests />} />
+                        <Route path="/hauls" element={<Hauls />} />
+                        <Route path="/serve" element={<Serve />} />
+                        <Route path="/serve/registry" element={<ServeRegistry />} />
+                        <Route path="/serve/fileserver" element={<ServeFileserver />} />
+                        <Route path="/copy" element={<CopyExport />} />
+                        <Route path="/registry" element={<RegistryLogin />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/jobs" element={<JobHistory />} />
+                        <Route path="/jobs/:id" element={<JobDetail />} />
+                      </Routes>
+                    </main>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </JobsProvider>
+      </AuthProvider>
     </Router>
   )
 }
