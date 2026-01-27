@@ -3,10 +3,10 @@
   "sessionId": "88b51a37-9a54-4928-b2bc-2d3136b147bb",
   "status": "running",
   "startedAt": "2026-01-27T15:16:19.089Z",
-  "updatedAt": "2026-01-27T15:17:36.411Z",
-  "currentIteration": 0,
+  "updatedAt": "2026-01-27T15:20:55.690Z",
+  "currentIteration": 1,
   "maxIterations": 150,
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -17,8 +17,8 @@
       {
         "id": "US-001",
         "title": "Repo scaffold: backend+frontend+docker skeleton",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-002",
@@ -160,7 +160,18 @@
       }
     ]
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-001",
+      "taskTitle": "Repo scaffold: backend+frontend+docker skeleton",
+      "taskCompleted": true,
+      "durationMs": 74492,
+      "startedAt": "2026-01-27T15:16:21.899Z",
+      "endedAt": "2026-01-27T15:17:36.391Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/home/roughneck/projects/hauler-ui",
   "activeTaskIds": [],
