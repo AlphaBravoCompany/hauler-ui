@@ -214,7 +214,7 @@ We welcome contributions! Please follow these guidelines:
 3. **Follow existing code style** and patterns
 4. **Update documentation** as needed
 
-## License
+## Hauler License
 
 Copyright © 2025 Rancher Government, Inc.
 
@@ -230,11 +230,16 @@ Copyright © 2025 Rancher Government, Inc.
  See the License for the specific language governing permissions and
  limitations under the License.
 
-## Support
+## Support on Hauler (not the UI)
 
 - **Issues**: [GitHub Issues](https://github.com/rancherfederal/hauler-ui/issues)
 - **Documentation**: [Hauler Docs](https://rancherfederal.github.io/hauler/)
 - **Community**: [Rancher Government Slack](https://ranchergovernment.slack.com/)
+
+## Support on Hauler UI
+
+- **Issues**: [GitHub Issues](https://github.com/AlphaBravoCompany/hauler-ui/issues)
+- **Documentation** [Documentation](https://github.com/AlphaBravoCompany/hauler-ui/tree/main/docs)
 
 ## Built by AlphaBravo
 
