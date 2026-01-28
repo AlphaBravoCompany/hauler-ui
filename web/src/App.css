@@ -77,6 +77,14 @@
   text-decoration: underline;
 }
 
+.sidebar-version {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: left;
+  padding-top: 0.25rem;
+  letter-spacing: 0.05em;
+}
+
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--border-color);

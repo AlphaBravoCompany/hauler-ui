@@ -27,12 +27,22 @@ Or in docker-compose.yml:
 ```yaml
 services:
   hauler-ui:
-    image: hauler-ui:latest
+    build: ..
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"   # Main UI
+      - "5000:5000"            # Registry serve
+      - "5001:5001"            # Fileserver serve
     volumes:
       - ./data:/data
+    environment:
+      - PORT=${PORT:-8080}
+      - HAULER_UI_PASSWORD=${HAULER_UI_PASSWORD:-}
+      - HAULER_LOG_LEVEL=${HAULER_LOG_LEVEL:-info}
+      - HAULER_IGNORE_ERRORS=${HAULER_IGNORE_ERRORS:-false}
+      - HAULER_RETRIES=${HAULER_RETRIES:-3}
 ```
+
+> **Note**: The authoritative docker-compose configuration is in `deploy/docker-compose.yml` with environment variable defaults in `deploy/.env.example`.
 
 ## Directory Structure
 
@@ -49,20 +59,15 @@ Within `/data`, the following structure is created:
 
 ## Environment Variables
 
-### HAULER_DIR (default: `/data`)
-Base directory for hauler data.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HAULER_DIR` | `/data` | Base directory for hauler data |
+| `HAULER_STORE_DIR` | `/data/store` | Location where hauler stores downloaded images, charts, and files |
+| `HAULER_TEMP_DIR` | `/data/tmp` | Temporary storage for operations like sync and extract |
+| `DOCKER_CONFIG` | `/data/.docker` | Directory containing Docker registry authentication |
+| `HOME` | `/data` | Set to `/data` so that `hauler login` writes credentials to the persistent volume |
 
-### HAULER_STORE_DIR (default: `/data/store`)
-Location where hauler stores downloaded images, charts, and files.
-
-### HAULER_TEMP_DIR (default: `/data/tmp`)
-Temporary storage for operations like sync and extract.
-
-### DOCKER_CONFIG (default: `/data/.docker`)
-Directory containing Docker registry authentication.
-
-### HOME (default: `/data`)
-Set to `/data` so that `hauler login` writes credentials to the persistent volume.
+For the complete list of environment variables, see `deploy/.env.example`.
 
 ## Registry Login Storage
 

@@ -260,6 +260,7 @@ function Sidebar() {
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-attribution">Hauler-UI built by <a href="https://alphabravo.io" target="_blank" rel="noopener noreferrer">AlphaBravo</a></div>
+          <div className="sidebar-version">v0.1.0-alpha</div>
         </div>
       </aside>
     </>

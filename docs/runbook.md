@@ -16,14 +16,22 @@ Create a `docker-compose.yml`:
 ```yaml
 services:
   hauler-ui:
-    image: hauler-ui:latest
+    build: ..
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"   # Main UI
+      - "5000:5000"            # Registry serve
+      - "5001:5001"            # Fileserver serve
     volumes:
       - ./data:/data
     environment:
-      - HAULER_UI_PASSWORD=your-optional-password
+      - PORT=${PORT:-8080}
+      - HAULER_UI_PASSWORD=${HAULER_UI_PASSWORD:-}
+      - HAULER_LOG_LEVEL=${HAULER_LOG_LEVEL:-info}
+      - HAULER_IGNORE_ERRORS=${HAULER_IGNORE_ERRORS:-false}
+      - HAULER_RETRIES=${HAULER_RETRIES:-3}
 ```
+
+> **Note**: See `deploy/docker-compose.yml` and `deploy/.env.example` for the authoritative configuration.
 
 Then run:
 
@@ -88,12 +96,21 @@ docker build -t hauler-ui:latest .
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP port for the UI |
+| `HAULER_UI_PASSWORD` | (empty) | Optional password for UI access |
+| `HAULER_LOG_LEVEL` | `info` | Hauler CLI log level (debug, info, warn, error) |
+| `HAULER_IGNORE_ERRORS` | `false` | Continue operations despite errors |
+| `HAULER_RETRIES` | `3` | Number of retries for failed operations |
 | `HAULER_DIR` | `/data` | Base directory for hauler data |
 | `HAULER_STORE_DIR` | `/data/store` | Content storage location |
 | `HAULER_TEMP_DIR` | `/data/tmp` | Temporary files location |
 | `DOCKER_CONFIG` | `/data/.docker` | Docker auth config directory |
-| `HAULER_UI_PASSWORD` | (empty) | Optional password for UI access |
 | `DATABASE_PATH` | `/data/app.db` | SQLite database path |
+
+**Optional variables** (not in .env.example but supported):
+- `HAULER_DEFAULT_PLATFORM` - Default platform for multi-arch operations
+- `HAULER_KEY_PATH` - Path to signing key for file verification
+
+> **Source of truth**: See `deploy/.env.example` for the complete list of documented environment variables.
 
 ### Volume Mounts
 
@@ -280,20 +297,23 @@ Job logs are also available in the UI under "Job History".
 
 ### Serve Operations Not Accessible
 
-The embedded registry/fileserver run on separate ports:
+The embedded registry and fileserver run on separate ports that must be exposed:
 
-- **Registry**: Default port 5000 (needs `-p 5000:5000`)
-- **Fileserver**: Default port 8080 (conflicts with UI!)
+- **Registry**: Port 5000 (container) → needs `-p 5000:5000`
+- **Fileserver**: Port 5001 (container) → needs `-p 5001:5001`
 
-Run with additional port mappings:
+If using Docker, run with additional port mappings:
 
 ```bash
 docker run -d \
   -p 8080:8080 \
   -p 5000:5000 \
+  -p 5001:5001 \
   -v ./data:/data \
   hauler-ui:latest
 ```
+
+If using docker-compose, ensure all three ports are mapped (see Quick Start example above).
 
 ## Development
 
@@ -322,5 +342,5 @@ make build  # Verify build succeeds
 ## Additional Resources
 
 - [Persistence Documentation](./persistence.md)
-- [Ralph TUI Development](./development.md#ralph-tui)
+- [Development Guide](./development.md)
 - Rancher Government Hauler CLI documentation

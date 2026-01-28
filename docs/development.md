@@ -2,207 +2,213 @@
 
 ## Overview
 
-Hauler UI is developed using Ralph TUI for task orchestration. The project uses `prd.json` to define user stories and acceptance criteria.
+This guide covers setting up a local development environment, building, testing, and contributing to Hauler UI.
 
-**Note**: `prd.json` is gitignored and maintained locally. If you're contributing to the project, you can create your own `prd.json` for task tracking or follow conventional commit practices without Ralph TUI.
+## Prerequisites
 
-## Ralph TUI Workflow
+- **Go** 1.24+ — Backend development
+- **Node.js** 20+ — Frontend development
+- **Make** — Convenient build commands (optional)
+- **Git** — Version control
+- **Docker** — Container builds and local testing
 
-### Prerequisites
+## Local Development Setup
 
-Install Ralph TUI following the official documentation.
-
-### Running with prd.json
-
-The `prd.json` file in the project root contains all user stories for the Hauler UI project:
-
-```json
-{
-  "name": "Hauler Web UI (single-user)",
-  "description": "A single-container, beginner-friendly web UI...",
-  "branchName": "ralph/hauler-webui",
-  "userStories": [...]
-}
-```
-
-### Converting PRD to Beads
-
-To use Ralph TUI's bead-based workflow:
+### 1. Clone the Repository
 
 ```bash
-# Convert PRD to beads
-ralph beads create prd.json
-
-# This creates an epic with child beads for each user story
+git clone https://github.com/rancherfederal/hauler-ui.git
+cd hauler-ui
 ```
 
-### Converting PRD to JSON Tasks
-
-Alternatively, use the JSON task format:
+### 2. Install Dependencies
 
 ```bash
-# Convert PRD to prd.json format for ralph-tui execution
-ralph json create prd.json
+# Install Go dependencies
+cd backend && go mod download
+
+# Install Node dependencies
+cd web && npm install
 ```
 
-### Story Status
-
-Track user story completion in `prd.json`:
-
-```json
-{
-  "id": "US-024",
-  "title": "Documentation: runbook and troubleshooting",
-  "passes": true,
-  "completionNotes": "Documentation completed"
-}
-```
-
-## Local Development
-
-### Quick Start
+Or use the make command:
 
 ```bash
-# Install dependencies
 make deps
+```
 
-# Run backend (from project root)
+### 3. Run Development Servers
+
+The backend and frontend run separately in development.
+
+**Backend (terminal 1):**
+```bash
 cd backend && go run .
+```
 
-# Run frontend (in another terminal)
+The backend serves on `http://localhost:8080` by default.
+
+**Frontend (terminal 2):**
+```bash
 cd web && npm run dev
 ```
 
-The frontend dev server runs on http://localhost:5173 and proxies API requests to the backend on port 8080.
-
-### Development with Docker
-
-```bash
-# Build and run with hot-reload
-docker-compose -f deploy/docker-compose.dev.yml up
-```
-
-Note: A dev compose file would need to be created for this workflow.
+The frontend dev server runs on `http://localhost:5173` and proxies API requests to the backend.
 
 ## Project Structure
 
 ```
 hauler-ui/
-├── backend/                 # Go backend
+├── backend/                 # Go backend server
 │   ├── internal/
-│   │   ├── auth/           # Authentication and sessions
+│   │   ├── auth/           # Authentication & sessions
 │   │   ├── config/         # Configuration management
 │   │   ├── hauler/         # Hauler CLI integration
-│   │   ├── jobrunner/      # Async job execution
-│   │   ├── manifests/      # Manifest CRUD
+│   │   ├── jobrunner/      # Background job execution
+│   │   ├── manifests/      # Manifest CRUD operations
 │   │   ├── registry/       # Registry login/logout
-│   │   ├── serve/          # Serve operations
-│   │   ├── settings/       # Settings management
+│   │   ├── serve/          # Registry & fileserver serving
+│   │   ├── settings/       # Global settings management
 │   │   ├── sqlite/         # Database operations
 │   │   └── store/          # Store operations
-│   ├── main.go             # Entry point
+│   ├── main.go             # Application entry point
 │   └── go.mod              # Go dependencies
 ├── web/                    # React frontend
 │   ├── src/
-│   │   ├── components/     # Reusable components
+│   │   ├── components/     # Reusable UI components
+│   │   ├── contexts/       # React Context providers
 │   │   ├── pages/          # Page components
-│   │   └── lib/            # Utilities
+│   │   └── lib/            # Utilities and API client
 │   ├── package.json        # Node dependencies
 │   └── vite.config.ts      # Vite configuration
-├── deploy/
-│   └── docker-compose.yml  # Production compose
-├── docs/                   # Documentation
-│   ├── runbook.md
-│   ├── persistence.md
-│   ├── limitations.md
-│   └── development.md
-├── Dockerfile              # Multi-stage build
+├── deploy/                 # Deployment configurations
+│   └── docker-compose.yml  # Production compose file
+├── docs/                   # Additional documentation
+├── Dockerfile              # Multi-stage container build
 └── Makefile               # Build automation
 ```
 
-**Note**: `prd.json` (Ralph TUI stories) is gitignored and used locally for development workflow.
+## Build Commands
 
-## Adding a New User Story
-
-1. Edit `prd.json` and add a new user story:
-```json
-{
-  "id": "US-XXX",
-  "title": "Feature: description",
-  "description": "As a user, I want...",
-  "acceptanceCriteria": [
-    "Criterion 1",
-    "Criterion 2"
-  ],
-  "priority": N,
-  "passes": false,
-  "dependsOn": ["US-YYY"]
-}
-```
-
-2. Convert to beads or JSON tasks for Ralph TUI
-
-3. Implement following the acceptance criteria
-
-4. Update `passes: true` when complete
-
-## Code Quality
-
-### Running Tests
+### Using Make (Recommended)
 
 ```bash
-make test
-```
+# Install all dependencies
+make deps
 
-### Running Linters
-
-```bash
-make lint
-```
-
-### Building
-
-```bash
+# Build everything (backend + frontend)
 make build
+
+# Build backend only
+make build-backend
+
+# Build frontend only
+make build-frontend
+
+# Build Docker image
+make docker-build
+
+# Run tests
+make test
+
+# Run linters
+make lint
+
+# Clean build artifacts
+make clean
 ```
 
-## Git Workflow
+### Manual Build
 
-Feature branches follow the pattern `ralph/hauler-webui` or feature-specific names.
-
-### Commit Messages
-
-Follow conventional commit format:
-```
-feat: US-XXX - Description
-fix: US-XXX - Bug fix description
-docs: US-XXX - Documentation updates
+**Backend:**
+```bash
+cd backend
+go build -o ../bin/hauler-ui .
 ```
 
-### Before Committing
+**Frontend:**
+```bash
+cd web
+npm run build
+```
 
-1. Ensure `make build` passes
-2. Ensure `make lint` passes
-3. Ensure `make test` passes
-4. Update `prd.json` with completion status
+**Docker:**
+```bash
+docker build -t hauler-ui:latest .
+```
+
+## Testing
+
+### Backend Tests
+
+```bash
+cd backend
+go test ./...
+```
+
+### Frontend Tests
+
+```bash
+cd web
+npm test
+```
+
+### End-to-End Tests
+
+```bash
+npm run test:e2e
+```
+
+## Configuration
+
+Development configuration can be set via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Backend HTTP server port |
+| `HAULER_DIR` | `./data` | Hauler working directory |
+| `HAULER_STORE_DIR` | `./data/store` | Store directory path |
+| `HAULER_TEMP_DIR` | `./data/tmp` | Temporary files directory |
+| `HAULER_UI_PASSWORD` | (none) | Optional UI password |
+
+For local development, create a `.env` file in the backend directory:
+
+```
+PORT=8080
+HAULER_DIR=./data
+```
 
 ## API Endpoints
 
 ### Public Routes
-- `GET /healthz` - Health check
-- `GET /api/config` - Current configuration
-- `POST /api/login` - UI authentication (if password set)
-- `POST /api/logout` - Clear session
+- `GET /healthz` — Health check
+- `GET /api/config` — Current configuration
+- `POST /api/login` — UI authentication (if password set)
+- `POST /api/logout` — Clear session
 
 ### Authenticated Routes (if password set)
-- `GET /api/jobs` - List jobs
-- `POST /api/jobs` - Create job
-- `GET /api/jobs/:id/stream` - SSE job logs
-- `POST /api/registry/login` - Registry login
-- `POST /api/registry/logout` - Registry logout
-- And more...
+- `GET /api/jobs` — List jobs
+- `POST /api/jobs` — Create job
+- `GET /api/jobs/:id/stream` — SSE job logs
+- `DELETE /api/jobs/:id` — Delete job
+- `POST /api/registry/login` — Registry login
+- `POST /api/registry/logout` — Registry logout
+- `GET /api/store` — Store contents
+- `POST /api/store/add` — Add to store
+- `POST /api/store/save` — Save archive
+- `POST /api/store/load` — Load archive
+- `POST /api/store/extract` — Extract archive
+- `GET /api/manifests` — List manifests
+- `POST /api/manifests` — Create manifest
+- `PUT /api/manifests/:id` — Update manifest
+- `DELETE /api/manifests/:id` — Delete manifest
+- `GET /api/settings` — Global settings
+- `PUT /api/settings` — Update settings
+- `POST /api/serve/registry` — Start registry
+- `POST /api/serve/fileserver` — Start fileserver
+- `DELETE /api/serve/:type` — Stop serve operation
 
-## Troubleshooting Development Issues
+## Troubleshooting
 
 ### Port 8080 Already in Use
 
@@ -212,22 +218,76 @@ export PORT=9090
 cd backend && go run .
 ```
 
-### Frontend API Proxy Issues
-
-Edit `web/vite.config.ts` to point to the correct backend port.
+Then update `web/vite.config.ts` to proxy to the new port.
 
 ### Hauler CLI Not Found
 
-The container includes Hauler CLI. For local development, ensure Hauler is installed:
+For local development outside the container, install Hauler CLI:
 ```bash
-which hauler
-hauler version
+# Follow installation instructions at:
+# https://github.com/rancherfederal/hauler
+```
+
+### Frontend Build Errors
+
+Clear the node_modules and reinstall:
+```bash
+cd web
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Database Issues
+
+Reset the local development database:
+```bash
+rm -f backend/data/app.db
 ```
 
 ## Contributing
 
-1. Create a new user story in `prd.json`
-2. Implement following acceptance criteria
-3. Add tests for new functionality
-4. Update documentation
-5. Submit with conventional commit message
+We welcome contributions! Please follow these guidelines:
+
+### Git Workflow
+
+1. **Fork** the repository on GitHub
+2. **Create a feature branch** from `main`
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes** and test thoroughly
+4. **Commit** with clear, descriptive messages
+5. **Push** to your fork
+6. **Create a pull request**
+
+### Commit Messages
+
+Follow conventional commit format:
+
+```
+feat: add support for custom registry URLs
+fix: resolve job timeout issue
+docs: update API documentation
+refactor: simplify store operations
+test: add integration tests for auth
+```
+
+### Before Submitting
+
+1. **Build passes** — `make build` succeeds
+2. **Tests pass** — `make test` succeeds
+3. **Linting passes** — `make lint` succeeds
+4. **Documentation updated** — Update relevant docs if needed
+
+### Code Style
+
+- **Go**: Follow standard Go formatting (`gofmt`)
+- **JavaScript/TypeScript**: Use ESLint configuration
+- **Comments**: Document public functions and complex logic
+- **Naming**: Use clear, descriptive names
+
+## Getting Help
+
+- **Issues**: [GitHub Issues](https://github.com/rancherfederal/hauler-ui/issues)
+- **Documentation**: [Hauler Docs](https://rancherfederal.github.io/hauler/)
+- **Community**: [Rancher Government Slack](https://ranchergovernment.slack.com/)

@@ -1,4 +1,4 @@
-# Hauler UI
+# Hauler UI by AlphaBravo
 
 A beginner-friendly web interface for [Rancher Government Hauler](https://github.com/rancherfederal/hauler) — the airgap content orchestration tool.
 
@@ -116,10 +116,17 @@ Hauler UI is configured via environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
+| `HAULER_UI_PASSWORD` | (none) | Optional UI password for authentication |
+| `HAULER_LOG_LEVEL` | `info` | Hauler CLI log level (debug, info, warn, error) |
+| `HAULER_IGNORE_ERRORS` | `false` | Continue operations despite errors |
+| `HAULER_RETRIES` | `3` | Number of retries for failed operations |
 | `HAULER_DIR` | `/data` | Hauler working directory |
 | `HAULER_STORE_DIR` | `/data/store` | Store directory path |
 | `HAULER_TEMP_DIR` | `/data/tmp` | Temporary files directory |
-| `HAULER_UI_PASSWORD` | (none) | Optional UI password for authentication |
+| `DOCKER_CONFIG` | `/data/.docker` | Docker auth config directory |
+| `DATABASE_PATH` | `/data/app.db` | SQLite database path |
+
+> **Source of truth**: See `deploy/.env.example` for the complete list of documented environment variables.
 
 ### Persistent Data
 
@@ -140,7 +147,9 @@ services:
   hauler-ui:
     image: ghcr.io/rancherfederal/hauler-ui:latest
     ports:
-      - "8080:8080"
+      - "8080:8080"   # Main UI
+      - "5000:5000"   # Registry serve
+      - "5001:5001"   # Fileserver serve
     volumes:
       - hauler-data:/data
     environment:
@@ -152,7 +161,13 @@ volumes:
 
 ### Kubernetes
 
-Hauler UI can be deployed to Kubernetes using the Helm chart (available separately).
+You can deploy Hauler UI to Kubernetes using the Docker image. Ensure to:
+
+1. Create a PersistentVolumeClaim for `/data`
+2. Set environment variables as needed
+3. Expose the service on your desired port
+
+Example deployment configuration is available in `deploy/kubernetes/`.
 
 ### Building Your Own Image
 
@@ -214,3 +229,9 @@ Copyright © 2025 Rancher Government, Inc.
 - **Issues**: [GitHub Issues](https://github.com/rancherfederal/hauler-ui/issues)
 - **Documentation**: [Hauler Docs](https://rancherfederal.github.io/hauler/)
 - **Community**: [Rancher Government Slack](https://ranchergovernment.slack.com/)
+
+## Built by AlphaBravo
+
+AlphaBravo is a SDVOSB Company providing DevSecOps / Cloud / AI solutions to Government and Commercial organizations.
+
+For more information visit us at https://alphabravo.io
