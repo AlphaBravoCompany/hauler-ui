@@ -52,7 +52,7 @@ docker run -d \
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.24+
 - Node.js 20+
 - Docker (for container build)
 

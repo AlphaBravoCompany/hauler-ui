@@ -4,6 +4,8 @@
 
 Hauler UI is developed using Ralph TUI for task orchestration. The project uses `prd.json` to define user stories and acceptance criteria.
 
+**Note**: `prd.json` is gitignored and maintained locally. If you're contributing to the project, you can create your own `prd.json` for task tracking or follow conventional commit practices without Ralph TUI.
+
 ## Ralph TUI Workflow
 
 ### Prerequisites
@@ -115,9 +117,10 @@ hauler-ui/
 │   ├── limitations.md
 │   └── development.md
 ├── Dockerfile              # Multi-stage build
-├── Makefile               # Build automation
-└── prd.json               # Ralph TUI stories
+└── Makefile               # Build automation
 ```
+
+**Note**: `prd.json` (Ralph TUI stories) is gitignored and used locally for development workflow.
 
 ## Adding a New User Story
 

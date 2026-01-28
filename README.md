@@ -119,7 +119,7 @@ Hauler UI is configured via environment variables:
 | `HAULER_DIR` | `/data` | Hauler working directory |
 | `HAULER_STORE_DIR` | `/data/store` | Store directory path |
 | `HAULER_TEMP_DIR` | `/data/tmp` | Temporary files directory |
-| `UI_PASSWORD` | (none) | Optional UI password for authentication |
+| `HAULER_UI_PASSWORD` | (none) | Optional UI password for authentication |
 
 ### Persistent Data
 
@@ -144,7 +144,7 @@ services:
     volumes:
       - hauler-data:/data
     environment:
-      - UI_PASSWORD=your-password  # Optional
+      - HAULER_UI_PASSWORD=your-password  # Optional
 
 volumes:
   hauler-data:
