@@ -238,6 +238,6 @@ Copyright © 2025 Rancher Government, Inc.
 
 ## Built by AlphaBravo
 
-AlphaBravo is a SDVOSB Company providing DevSecOps / Cloud / AI solutions to Government and Commercial organizations.
+AlphaBravo is a SDVOSB Company providing DevSecOps / Cloud / AI solutions to Government and Commercial organizations. We are committed to delivering secure and innovative technology solutions tailored to your needs.
 
-For more information visit us at https://alphabravo.io
+For more information visit us at https://alphabravo.io.
