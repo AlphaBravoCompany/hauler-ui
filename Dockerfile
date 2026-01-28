@@ -7,7 +7,7 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.24-alpine AS backend-builder
 
 WORKDIR /backend
 COPY backend/go.mod backend/go.sum* ./
@@ -18,6 +18,20 @@ RUN CGO_ENABLED=0 go build -o /app/server .
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates
+
+# Install hauler CLI (pinned version 1.3.2, multi-arch aware)
+ARG TARGETPLATFORM
+ARG TARGETARCH
+RUN apk add --no-cache curl && \
+    HAULER_VERSION="1.3.2" && \
+    curl -sfSL "https://github.com/hauler-dev/hauler/releases/download/v${HAULER_VERSION}/hauler_${HAULER_VERSION}_checksums.txt" -o /tmp/checksums.txt && \
+    curl -sfSL "https://github.com/hauler-dev/hauler/releases/download/v${HAULER_VERSION}/hauler_${HAULER_VERSION}_linux_${TARGETARCH}.tar.gz" -o /tmp/hauler.tar.gz && \
+    CHECKSUM=$(awk '$2 == "hauler_'${HAULER_VERSION}'_linux_'${TARGETARCH}'.tar.gz" {print $1}' /tmp/checksums.txt) && \
+    echo "${CHECKSUM}  /tmp/hauler.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/hauler.tar.gz -C /tmp && \
+    install -m 755 /tmp/hauler /usr/local/bin/hauler && \
+    rm -f /tmp/hauler.tar.gz /tmp/hauler /tmp/checksums.txt && \
+    apk del curl
 
 # Create /data directory for persistent storage
 # This directory should be mounted as a volume for:

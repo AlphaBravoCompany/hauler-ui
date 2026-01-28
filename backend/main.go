@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -19,6 +20,51 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/store"
 )
 
+// startJobProcessor starts a background goroutine that processes queued jobs
+func startJobProcessor(runner *jobrunner.Runner, stopCh <-chan struct{}) {
+	ctx := context.Background()
+
+	go func() {
+		log.Println("Job processor goroutine started")
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-stopCh:
+				log.Println("Job processor stopped")
+				return
+			case <-ticker.C:
+				// Look for queued jobs
+				jobs, err := runner.ListJobs(ctx, nil)
+				if err != nil {
+					log.Printf("Error listing jobs: %v", err)
+					continue
+				}
+
+				log.Printf("Job processor: found %d total jobs", len(jobs))
+
+				// Start any queued jobs
+				startedCount := 0
+				for _, job := range jobs {
+					if job.Status == jobrunner.StatusQueued {
+						log.Printf("Starting queued job #%d: %s %v", job.ID, job.Command, job.Args)
+						if err := runner.Start(ctx, job.ID); err != nil {
+							log.Printf("Error starting job #%d: %v", job.ID, err)
+						} else {
+							startedCount++
+						}
+					}
+				}
+				if startedCount > 0 {
+					log.Printf("Started %d jobs", startedCount)
+				}
+			}
+		}
+	}()
+	log.Println("Job processor started")
+}
+
 func main() {
 	cfg := config.Load()
 
@@ -33,6 +79,11 @@ func main() {
 		// Initialize job runner
 	jobRunner := jobrunner.New(db.DB)
 	jobHandler := jobrunner.NewHandler(jobRunner, cfg)
+
+	// Start background job processor
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	startJobProcessor(jobRunner, stopCh)
 
 	// Initialize hauler detector
 	haulerBinary := getEnv("HAULER_BINARY", "hauler")
@@ -86,18 +137,21 @@ func main() {
 
 	// Job API endpoints
 	mux.HandleFunc("/api/jobs", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			jobHandler.CreateJob(w, r)
-		} else {
+		case http.MethodDelete:
+			jobHandler.DeleteAllJobs(w, r)
+		default:
 			jobHandler.ListJobs(w, r)
 		}
 	})
 	mux.HandleFunc("/api/jobs/", func(w http.ResponseWriter, r *http.Request) {
-		// Check if this is a logs or stream request
+		// Check if this is a logs, stream, or cleanup request
 		if len(r.URL.Path) > len("/api/jobs/") {
 			suffix := r.URL.Path[len("/api/jobs/"):]
 			if len(suffix) > 0 {
-				// Look for /logs or /stream suffix
+				// Look for /logs, /stream, or /cleanup suffix
 				for i, c := range suffix {
 					if c == '/' {
 						sub := suffix[i:]
@@ -107,6 +161,10 @@ func main() {
 						}
 						if sub == "/stream" {
 							jobHandler.StreamJobLogs(w, r)
+							return
+						}
+						if sub == "/cleanup" && r.Method == http.MethodPost {
+							jobHandler.CleanupStaleJob(w, r)
 							return
 						}
 					}
@@ -123,12 +181,18 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, "./web/dist/index.html")
+		http.ServeFile(w, r, "./web/index.html")
 	})
 
 	// Serve static files from web build directory
-	fs := http.FileServer(http.Dir("./web/dist"))
+	fs := http.FileServer(http.Dir("./web"))
 	mux.Handle("/assets/", fs)
+	mux.HandleFunc("/hauler-logo.svg", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/hauler-logo.svg")
+	})
+	mux.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/favicon.svg")
+	})
 
 	// Wrap mux with auth middleware
 	handlerWithAuth := authManager.Middleware(mux)

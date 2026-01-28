@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, NavLink } from 'react-router-dom'
 import { useJobs } from '../App.jsx'
+import { Clipboard } from 'lucide-react'
 
 function StoreCopy() {
   const { fetchJobs } = useJobs()
@@ -224,7 +225,12 @@ function StoreCopy() {
               disabled={submitting || !target.trim()}
               style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
             >
-              {submitting ? 'Starting Copy...' : '📋 Copy Store'}
+              {submitting ? 'Starting Copy...' : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clipboard size={18} />
+                  Copy Store
+                </span>
+              )}
             </button>
           </form>
         </div>

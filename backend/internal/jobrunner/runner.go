@@ -59,6 +59,11 @@ func New(db *sql.DB) *Runner {
 	return &Runner{db: db}
 }
 
+// DB returns the underlying database connection
+func (r *Runner) DB() *sql.DB {
+	return r.db
+}
+
 // CreateJob creates a new job in the database
 func (r *Runner) CreateJob(ctx context.Context, command string, args []string, envOverrides map[string]string) (*Job, error) {
 	r.mu.Lock()
@@ -121,6 +126,7 @@ func (r *Runner) Start(ctx context.Context, jobID int64) error {
 	// Create command
 	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
 	cmd.Env = env
+	cmd.Dir = "/data"
 
 	// Get pipes for stdout and stderr
 	stdout, err := cmd.StdoutPipe()

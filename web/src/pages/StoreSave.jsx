@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, NavLink } from 'react-router-dom'
 import { useJobs } from '../App.jsx'
+import { Check, Save } from 'lucide-react'
 
 function StoreSave() {
   const { fetchJobs } = useJobs()
@@ -111,8 +112,9 @@ function StoreSave() {
       {/* Download link shown after successful job completion */}
       {jobResult && jobResult.archivePath && (
         <div className="card" style={{ borderColor: 'var(--accent-green)', marginBottom: '1rem' }}>
-          <div className="card-title" style={{ color: 'var(--accent-green)' }}>
-            ✓ Archive Ready
+          <div className="card-title" style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Check size={20} />
+            Archive Ready
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '0.5rem' }}>
@@ -193,7 +195,12 @@ function StoreSave() {
               disabled={submitting || !filename.trim()}
               style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
             >
-              {submitting ? 'Starting Save...' : '💾 Save Store'}
+              {submitting ? 'Starting Save...' : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Save size={18} />
+                  Save Store
+                </span>
+              )}
             </button>
           </form>
         </div>

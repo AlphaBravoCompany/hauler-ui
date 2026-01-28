@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, NavLink, useParams } from 'react-router-dom'
 import { useJobs } from '../App.jsx'
+import { AlertTriangle, X, RefreshCw } from 'lucide-react'
 
 function StoreSync() {
   const { fetchJobs } = useJobs()
@@ -192,8 +193,9 @@ function StoreSync() {
 
       {showProductWarning && (
         <div className="card" style={{ borderColor: 'var(--accent-amber)', marginBottom: '1rem' }}>
-          <div className="card-title" style={{ color: 'var(--accent-amber)' }}>
-            ⚠ Product Registry Notice
+          <div className="card-title" style={{ color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={18} />
+            Product Registry Notice
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '0.5rem' }}>
@@ -326,7 +328,7 @@ function StoreSync() {
                           disabled={submitting}
                           style={{ color: 'var(--accent-red)' }}
                         >
-                          ✕
+                          <X size={16} />
                         </button>
                       )}
                     </div>
@@ -511,8 +513,9 @@ function StoreSync() {
                       onChange={(e) => setRewrite(e.target.value)}
                       disabled={submitting}
                     />
-                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginTop: '0.35rem' }}>
-                      ⚠ Experimental: Rewrite artifact path to specified string
+                    <div style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <AlertTriangle size={14} />
+                      Experimental: Rewrite artifact path to specified string
                     </div>
                   </div>
 
@@ -546,7 +549,12 @@ function StoreSync() {
               )}
               style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
             >
-              {submitting ? 'Starting Sync...' : '🔄 Start Sync'}
+              {submitting ? 'Starting Sync...' : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                  <RefreshCw size={18} />
+                  Start Sync
+                </span>
+              )}
             </button>
           </form>
         </div>

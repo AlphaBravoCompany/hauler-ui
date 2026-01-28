@@ -1,14 +1,15 @@
 {
   "id": "9cbbcb6d-129a-470f-8465-d4a66cf7760f",
-  "status": "running",
+  "status": "completed",
   "startedAt": "2026-01-27T20:04:55.531Z",
-  "updatedAt": "2026-01-27T20:22:26.597Z",
+  "updatedAt": "2026-01-27T20:48:53.770Z",
   "agentPlugin": "claude",
   "trackerPlugin": "json",
   "prdPath": "./prd.json",
-  "currentIteration": 3,
+  "currentIteration": 4,
   "maxIterations": 150,
   "totalTasks": 0,
-  "tasksCompleted": 3,
-  "cwd": "/home/roughneck/projects/hauler-ui"
+  "tasksCompleted": 4,
+  "cwd": "/home/roughneck/projects/hauler-ui",
+  "endedAt": "2026-01-27T20:48:53.770Z"
 }

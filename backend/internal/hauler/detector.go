@@ -228,26 +228,32 @@ func parseFlags(helpText string) []Flag {
 		}
 
 		// Try standard format
-		if matches := flagRe.FindStringSubmatch(line); len(matches) >= 4 {
+		if matches := flagRe.FindStringSubmatch(line); len(matches) >= 6 {
+			// Extract default value before trimming
+			rawDescription := strings.TrimSpace(matches[5])
+			var defaultValue string
+			if idx := strings.Index(rawDescription, "(default"); idx > 0 {
+				// Extract default value from format: (default $HOME/.hauler) or (default: "value")
+				defaultPart := rawDescription[idx:]
+				if re := regexp.MustCompile(`\(default[^:]*:\s*([^\)]+)\)`); re.MatchString(defaultPart) {
+					defaultMatches := re.FindStringSubmatch(defaultPart)
+					if len(defaultMatches) >= 2 {
+						defaultValue = defaultMatches[1]
+					}
+				}
+				// Trim description to remove the default part
+				rawDescription = strings.TrimSpace(rawDescription[:idx])
+			}
+
 			flag := Flag{
 				Short:       matches[2],
 				Name:        matches[3],
-				Description: strings.TrimSpace(matches[5]),
+				Description: rawDescription,
+				Default:     defaultValue,
 			}
 			// If there's a type (group 4), append to name for clarity
-			if matches[4] != "" {
+			if len(matches) > 4 && matches[4] != "" {
 				flag.Name = flag.Name + " " + matches[4]
-			}
-			// Extract default value from description if present
-			if idx := strings.Index(flag.Description, "(default"); idx > 0 {
-				flag.Description = strings.TrimSpace(flag.Description[:idx])
-				defaultPart := flag.Description[idx:]
-				if re := regexp.MustCompile(`\(default\s+:\s+([^)]+)\)`); re.MatchString(defaultPart) {
-					defaultMatches := re.FindStringSubmatch(defaultPart)
-					if len(defaultMatches) >= 2 {
-						flag.Default = defaultMatches[1]
-					}
-				}
 			}
 			flags = append(flags, flag)
 		}

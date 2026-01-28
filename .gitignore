@@ -35,4 +35,13 @@ Thumbs.db
 
 # Data
 /data
+/deploy/data
 *.db
+
+# Reports
+*_REPORT.md
+*_COVERAGE*.md
+
+# Ralph-tui
+.ralph-tui/iterations/
+.ralph-tui/*.log

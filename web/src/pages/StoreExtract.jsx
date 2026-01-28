@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, NavLink } from 'react-router-dom'
 import { useJobs } from '../App.jsx'
+import { Check, Upload } from 'lucide-react'
 
 function StoreExtract() {
   const { fetchJobs } = useJobs()
@@ -109,8 +110,9 @@ function StoreExtract() {
       {/* Success message shown after successful job completion */}
       {jobResult && jobResult.outputDir && (
         <div className="card" style={{ borderColor: 'var(--accent-green)', marginBottom: '1rem' }}>
-          <div className="card-title" style={{ color: 'var(--accent-green)' }}>
-            ✓ Extraction Complete
+          <div className="card-title" style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Check size={20} />
+            Extraction Complete
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '0.5rem' }}>
@@ -169,7 +171,12 @@ function StoreExtract() {
               disabled={submitting || !artifactRef.trim()}
               style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
             >
-              {submitting ? 'Starting Extract...' : '📤 Extract Artifact'}
+              {submitting ? 'Starting Extract...' : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Upload size={18} />
+                  Extract Artifact
+                </span>
+              )}
             </button>
           </form>
         </div>

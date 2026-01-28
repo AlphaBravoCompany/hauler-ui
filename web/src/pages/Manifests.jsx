@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import * as yaml from 'js-yaml'
+import { X, AlertTriangle, Search, Clipboard, RefreshCw, Edit, Trash2, Download } from 'lucide-react'
+import { useModal } from '../components/Modal.jsx'
 
 // Manifest templates based on hauler content.hauler.cattle.io/v1
 const MANIFEST_TEMPLATES = {
@@ -48,6 +50,7 @@ items:
 `
 
 function Manifests() {
+  const { confirm } = useModal()
   const [manifests, setManifests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -105,7 +108,8 @@ function Manifests() {
   }
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+    const confirmed = await confirm('Delete Manifest', `Are you sure you want to delete "${name}"?`)
+    if (!confirmed) {
       return
     }
 
@@ -281,8 +285,9 @@ function Manifests() {
 
       {/* Editor Modal */}
       {showEditor && (
-        <div className="modal-overlay" onClick={() => {
-          if (confirm('Close editor without saving?')) {
+        <div className="modal-overlay" onClick={async () => {
+          const confirmed = await confirm('Close Editor', 'Close editor without saving?')
+          if (confirmed) {
             setShowEditor(false)
             setEditingManifest(null)
           }
@@ -294,14 +299,15 @@ function Manifests() {
               </h2>
               <button
                 className="btn btn-sm"
-                onClick={() => {
-                  if (confirm('Close editor without saving?')) {
+                onClick={async () => {
+                  const confirmed = await confirm('Close Editor', 'Close editor without saving?')
+                  if (confirmed) {
                     setShowEditor(false)
                     setEditingManifest(null)
                   }
                 }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -395,8 +401,9 @@ function Manifests() {
                   />
                 </div>
                 {yamlError && (
-                  <div style={{ color: 'var(--accent-red)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                    ⚠ {yamlError}
+                  <div style={{ color: 'var(--accent-red)', fontSize: '0.85rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertTriangle size={14} />
+                    {yamlError}
                   </div>
                 )}
               </div>
@@ -405,8 +412,9 @@ function Manifests() {
             <div className="modal-footer">
               <button
                 className="btn"
-                onClick={() => {
-                  if (confirm('Close editor without saving?')) {
+                onClick={async () => {
+                  const confirmed = await confirm('Close Editor', 'Close editor without saving?')
+                  if (confirmed) {
                     setShowEditor(false)
                     setEditingManifest(null)
                   }
@@ -427,7 +435,9 @@ function Manifests() {
         <div className="loading">Loading manifests...</div>
       ) : filteredManifests.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">{searchQuery ? '🔍' : '📋'}</div>
+          <div className="empty-state-icon">
+            {searchQuery ? <Search size={48} style={{ color: 'var(--text-muted)' }} /> : <Clipboard size={48} style={{ color: 'var(--text-muted)' }} />}
+          </div>
           <div className="empty-state-text">
             {searchQuery ? 'No matching manifests found' : 'No manifests yet'}
           </div>
@@ -515,7 +525,7 @@ function Manifests() {
                       onClick={() => handleDownload(manifest.id, manifest.name)}
                       title="Download as YAML file"
                     >
-                      ⬇
+                      <Download size={16} />
                     </button>
                     <NavLink
                       to={`/store/sync/${manifest.id}`}
@@ -523,14 +533,14 @@ function Manifests() {
                       title="Use this manifest for sync"
                       style={{ color: 'var(--accent-green)' }}
                     >
-                      🔄
+                      <RefreshCw size={16} />
                     </NavLink>
                     <button
                       className="btn btn-sm"
                       onClick={() => handleEdit(manifest)}
                       title="Edit manifest"
                     >
-                      ✏
+                      <Edit size={16} />
                     </button>
                     <button
                       className="btn btn-sm"
@@ -538,7 +548,7 @@ function Manifests() {
                       title="Delete manifest"
                       style={{ color: 'var(--accent-red)' }}
                     >
-                      🗑
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>

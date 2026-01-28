@@ -347,6 +347,57 @@ func (h *Handler) notifyClients(jobID int64) {
 	}
 }
 
+// DeleteAllJobs handles DELETE /api/jobs - deletes all jobs
+func (h *Handler) DeleteAllJobs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Delete all jobs (job_logs cascade deleted via FK)
+	_, err := h.runner.db.ExecContext(r.Context(), "DELETE FROM jobs")
+	if err != nil {
+		log.Printf("Error deleting all jobs: %v", err)
+		http.Error(w, "Failed to delete jobs", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "All jobs deleted"})
+}
+
+// CleanupStaleJob marks a stale running job as failed
+func (h *Handler) CleanupStaleJob(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get job ID from URL path
+	jobID, err := parseID(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid job ID", http.StatusBadRequest)
+		return
+	}
+
+	// Update job to failed status
+	_, err = h.runner.db.ExecContext(r.Context(),
+		`UPDATE jobs
+		 SET status = 'failed', completed_at = CURRENT_TIMESTAMP, exit_code = -1
+		 WHERE id = ? AND status = 'running'`,
+		jobID)
+	if err != nil {
+		log.Printf("Error cleaning up stale job %d: %v", jobID, err)
+		http.Error(w, "Failed to cleanup job", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Job marked as failed"})
+}
+
 // parseID extracts the job ID from the URL path
 // Expects path like /api/jobs/123 or /api/jobs/123/logs or /api/jobs/123/stream
 func parseID(path string) (int64, error) {

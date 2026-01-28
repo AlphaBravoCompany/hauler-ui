@@ -2,12 +2,14 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -585,6 +587,143 @@ func (h *Handler) runSaveJob(ctx context.Context, jobID int64, archivePath strin
 	}()
 }
 
+// HaulInfo represents information about a haul archive file
+type HaulInfo struct {
+	Name     string    `json:"name"`
+	Size     int64     `json:"size"`
+	Modified time.Time `json:"modified"`
+}
+
+// ListHauls handles GET /api/store/hauls
+// Returns a list of .tar.zst archive files in the data directory
+func (h *Handler) ListHauls(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Ensure data directory exists
+	dataDir := h.Cfg.DataDir
+	if dataDir == "" {
+		dataDir = "."
+	}
+
+	// Read directory entries
+	entries, err := os.ReadDir(dataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist yet, return empty list
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"hauls": []HaulInfo{},
+			})
+			return
+		}
+		log.Printf("Error reading data directory: %v", err)
+		http.Error(w, "Failed to read data directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Filter for .tar.zst files
+	var hauls []HaulInfo
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		// Check for .tar.zst extension
+		if strings.HasSuffix(strings.ToLower(name), ".tar.zst") {
+			info, err := entry.Info()
+			if err != nil {
+				log.Printf("Error getting file info for %s: %v", name, err)
+				continue
+			}
+			hauls = append(hauls, HaulInfo{
+				Name:     name,
+				Size:     info.Size(),
+				Modified: info.ModTime(),
+			})
+		}
+	}
+
+	// Sort by modified time (newest first)
+	// Sort in reverse order so newest is first
+	for i := 0; i < len(hauls); i++ {
+		for j := i + 1; j < len(hauls); j++ {
+			if hauls[i].Modified.Before(hauls[j].Modified) {
+				hauls[i], hauls[j] = hauls[j], hauls[i]
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"hauls": hauls,
+	})
+}
+
+// DeleteHaul handles DELETE /api/store/hauls/{filename}
+// Deletes a specific haul archive file
+func (h *Handler) DeleteHaul(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract filename from path
+	// Path format: /api/store/hauls/{filename}
+	prefix := "/api/store/hauls/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	filename := strings.TrimPrefix(r.URL.Path, prefix)
+	if filename == "" {
+		http.Error(w, "Filename required", http.StatusBadRequest)
+		return
+	}
+
+	// Security: ensure filename doesn't contain path traversal
+	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the file has .tar.zst extension before allowing delete
+	if !strings.HasSuffix(strings.ToLower(filename), ".tar.zst") {
+		http.Error(w, "Only .tar.zst files can be deleted through this endpoint", http.StatusBadRequest)
+		return
+	}
+
+	// Build the full path to the archive
+	archivePath := filepath.Join(h.Cfg.DataDir, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the file
+	if err := os.Remove(archivePath); err != nil {
+		log.Printf("Error deleting haul file %s: %v", archivePath, err)
+		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Deleted haul archive: %s", archivePath)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Haul deleted successfully",
+		"filename": filename,
+	})
+}
+
 // ServeDownload handles GET /api/downloads/{filename} for downloading saved archives
 func (h *Handler) ServeDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -692,6 +831,7 @@ type ExtractRequest struct {
 // LoadRequest represents the request to load archives into the store
 type LoadRequest struct {
 	Filenames []string `json:"filenames,omitempty"`
+	Clear      bool     `json:"clear"`
 }
 
 // Extract handles POST /api/store/extract
@@ -794,31 +934,65 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
+	// Clear store if requested
+	if req.Clear {
+		if err := h.clearStore(ctx); err != nil {
+			log.Printf("Error clearing store: %v", err)
+			http.Error(w, "Failed to clear store: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Determine filenames to load
+	filenames := req.Filenames
+	if len(filenames) == 0 {
+		filenames = []string{"haul.tar.zst"}
+	}
+
 	// Build args for hauler store load command
 	args := []string{"store", "load"}
-
-	// Add each file with -f flag
-	if len(req.Filenames) > 0 {
-		for _, f := range req.Filenames {
-			args = append(args, "-f", f)
-		}
-	} else {
-		// Default to haul.tar.zst as per acceptance criteria
-		args = append(args, "-f", "haul.tar.zst")
+	for _, f := range filenames {
+		args = append(args, "-f", f)
 	}
 
 	// Create a job for the load operation
-	job, err := h.JobRunner.CreateJob(r.Context(), "hauler", args, nil)
+	job, err := h.JobRunner.CreateJob(ctx, "hauler", args, nil)
 	if err != nil {
 		log.Printf("Error creating load job: %v", err)
 		http.Error(w, "Failed to create load job", http.StatusInternalServerError)
 		return
 	}
 
-	// Start the job in background
+	// The job processor will start the queued job automatically.
+	// Start a goroutine to track contents after completion.
+	jobID := job.ID // Capture job ID for goroutine
 	go func() {
-		if err := h.JobRunner.Start(r.Context(), job.ID); err != nil {
-			log.Printf("Error starting load job %d: %v", job.ID, err)
+		// Use background context since this runs after HTTP response is sent
+		bgCtx := context.Background()
+		// Wait for job to complete, then track contents
+		for {
+			time.Sleep(500 * time.Millisecond)
+			j, err := h.JobRunner.GetJob(bgCtx, jobID)
+			if err != nil {
+				log.Printf("Error getting job status %d: %v", jobID, err)
+				return
+			}
+
+			if j.Status == jobrunner.StatusSucceeded {
+				for _, haulFile := range filenames {
+					if err := h.trackStoreContents(bgCtx, haulFile); err != nil {
+						log.Printf("Warning: failed to track contents for %s: %v", haulFile, err)
+					}
+				}
+				return
+			}
+
+			if j.Status == jobrunner.StatusFailed {
+				log.Printf("Load job %d failed, skipping tracking", jobID)
+				return
+			}
 		}
 	}()
 
@@ -827,7 +1001,8 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"jobId":     job.ID,
 		"message":   "Load job started",
-		"filenames": req.Filenames,
+		"filenames": filenames,
+		"cleared":    req.Clear,
 	})
 }
 
@@ -962,8 +1137,383 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// StoreInfo represents the response from hauler store info
+type StoreInfo struct {
+	Images []ImageInfo  `json:"images"`
+	Charts []ChartInfo  `json:"charts"`
+	Files  []FileInfo   `json:"files"`
+}
+
+// ImageInfo represents information about a stored image
+type ImageInfo struct {
+	Name      string `json:"name,omitempty"`
+	Digest    string `json:"digest,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+	SourceHaul string `json:"sourceHaul,omitempty"`
+}
+
+// ChartInfo represents information about a stored chart
+type ChartInfo struct {
+	Name      string `json:"name,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Digest    string `json:"digest,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+	SourceHaul string `json:"sourceHaul,omitempty"`
+}
+
+// FileInfo represents information about a stored file
+type FileInfo struct {
+	Name      string `json:"name,omitempty"`
+	Digest    string `json:"digest,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+	SourceHaul string `json:"sourceHaul,omitempty"`
+}
+
+// StoreItem represents a single item from hauler store info raw output
+type StoreItem struct {
+	Reference string `json:"Reference"`
+	Type      string `json:"Type"`
+	Platform  string `json:"Platform"`
+	Digest    string `json:"Digest"`
+	Layers    int    `json:"Layers"`
+	Size      int64  `json:"Size"`
+}
+
+// GetInfo handles GET /api/store/info
+// Runs "hauler store info -o json" and returns parsed store contents
+func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Build args for hauler store info command with JSON output
+	args := []string{"store", "info", "-o", "json"}
+
+	// Add store directory from config if available
+	if h.Cfg.HaulerStoreDir != "" {
+		args = append(args, "--store", h.Cfg.HaulerStoreDir)
+	}
+
+	// Run hauler store info command directly
+	ctx := r.Context()
+	cmd := exec.CommandContext(ctx, "hauler", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error running store info: %v, output: %s", err, string(output))
+		http.Error(w, "Failed to get store info: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch source_haul data from database
+	type SourceInfo struct {
+		Name      string
+		SourceHaul string
+	}
+	// Map by digest (primary) and by name (fallback)
+	digestSourceMap := make(map[string]string)
+	nameSourceMap := make(map[string]string)
+
+	db := h.JobRunner.DB()
+	rows, err := db.QueryContext(ctx, `SELECT name, digest, source_haul FROM store_contents`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var s SourceInfo
+			var digest sql.NullString
+			if err := rows.Scan(&s.Name, &digest, &s.SourceHaul); err == nil {
+				nameSourceMap[s.Name] = s.SourceHaul
+				if digest.Valid {
+					digestSourceMap[digest.String] = s.SourceHaul
+				}
+			}
+		}
+	}
+
+	// Parse the array format from hauler store info
+	var items []StoreItem
+	storeInfo := StoreInfo{
+		Images: []ImageInfo{},
+		Charts: []ChartInfo{},
+		Files:  []FileInfo{},
+	}
+
+	// Handle empty store (returns "null")
+	trimmed := strings.TrimSpace(string(output))
+	if trimmed == "null" || trimmed == "" {
+		// Empty store, keep default empty slices
+	} else if err := json.Unmarshal(output, &items); err != nil {
+		log.Printf("Error parsing store info JSON: %v, output: %s", err, string(output))
+		http.Error(w, "Failed to parse store info: "+err.Error(), http.StatusInternalServerError)
+		return
+	} else {
+		// Group items by type
+		for _, item := range items {
+			// Look up source_haul from database
+			// Try digest first (most reliable), then exact name, then normalized name variations
+			sourceHaul := digestSourceMap[item.Digest]
+			if sourceHaul == "" {
+				sourceHaul = nameSourceMap[item.Reference]
+			}
+			// For images, try matching without registry prefix as fallback
+			if sourceHaul == "" {
+				normalizedName := item.Reference
+				// Strip common registry prefixes
+				for _, prefix := range []string{"index.docker.io/", "docker.io/"} {
+					if strings.HasPrefix(normalizedName, prefix) {
+						normalizedName = strings.TrimPrefix(normalizedName, prefix)
+						break
+					}
+				}
+				if sourceHaul = nameSourceMap[normalizedName]; sourceHaul != "" {
+					// Found it
+				} else if sourceHaul = nameSourceMap["library/"+normalizedName]; sourceHaul != "" {
+					// Try with library/ prefix for docker hub images
+				}
+			}
+
+			switch strings.ToLower(item.Type) {
+			case "image":
+				storeInfo.Images = append(storeInfo.Images, ImageInfo{
+					Name:      item.Reference,
+					Digest:    item.Digest,
+					Size:      item.Size,
+					SourceHaul: sourceHaul,
+				})
+			case "chart":
+				// Extract version from reference (format: hauler/chart:version)
+				name := item.Reference
+				version := ""
+				if parts := strings.Split(name, ":"); len(parts) >= 2 {
+					name = strings.Join(parts[:len(parts)-1], ":")
+					version = parts[len(parts)-1]
+				}
+				storeInfo.Charts = append(storeInfo.Charts, ChartInfo{
+					Name:       name,
+					Version:    version,
+					Digest:     item.Digest,
+					Size:       item.Size,
+					SourceHaul: sourceHaul,
+				})
+			case "file":
+				storeInfo.Files = append(storeInfo.Files, FileInfo{
+					Name:       item.Reference,
+					Digest:     item.Digest,
+					Size:       item.Size,
+					SourceHaul: sourceHaul,
+				})
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(storeInfo)
+}
+
+// clearStore removes the store directory and recreates the OCI layout structure
+func (h *Handler) clearStore(ctx context.Context) error {
+	storeDir := h.Cfg.HaulerStoreDir
+	if storeDir == "" {
+		storeDir = filepath.Join(h.Cfg.DataDir, "store")
+	}
+
+	// Ensure required directories exist
+	tmpDir := filepath.Join(h.Cfg.DataDir, "tmp")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return fmt.Errorf("creating tmp directory: %w", err)
+	}
+
+	// Remove the store directory
+	if err := os.RemoveAll(storeDir); err != nil {
+		return fmt.Errorf("removing store directory: %w", err)
+	}
+
+	// Recreate the OCI layout structure
+	blobsDir := filepath.Join(storeDir, "blobs", "sha256")
+	if err := os.MkdirAll(blobsDir, 0755); err != nil {
+		return fmt.Errorf("creating blobs directory: %w", err)
+	}
+
+	// Create minimal oci-layout
+	ociLayout := []byte(`{"imageLayoutVersion": "1.0.0"}`)
+	ociLayoutPath := filepath.Join(storeDir, "oci-layout")
+	if err := os.WriteFile(ociLayoutPath, ociLayout, 0644); err != nil {
+		return fmt.Errorf("creating oci-layout: %w", err)
+	}
+
+	log.Printf("Store cleared and recreated at %s", storeDir)
+	return nil
+}
+
+// trackStoreContents adds entries to store_contents table for items from a haul
+func (h *Handler) trackStoreContents(ctx context.Context, haulFilename string) error {
+	storeDir := h.Cfg.HaulerStoreDir
+	if storeDir == "" {
+		storeDir = filepath.Join(h.Cfg.DataDir, "store")
+	}
+
+	// Parse the index.json to discover what's in the store
+	indexPath := filepath.Join(storeDir, "index.json")
+	indexData, err := os.ReadFile(indexPath)
+	if err != nil {
+		return fmt.Errorf("reading index.json: %w", err)
+	}
+
+	var index struct {
+		Manifests []struct {
+			Digest      string                 `json:"digest"`
+			Annotations map[string]interface{} `json:"annotations"`
+		} `json:"manifests"`
+	}
+	if err := json.Unmarshal(indexData, &index); err != nil {
+		return fmt.Errorf("parsing index.json: %w", err)
+	}
+
+	// Insert items into store_contents
+	db := h.JobRunner.DB()
+	for _, manifest := range index.Manifests {
+		// Get name from annotations - prefer io.containerd.image.name (full reference)
+		// over org.opencontainers.image.ref.name (short reference)
+		var name string
+		if manifest.Annotations != nil {
+			// Try io.containerd.image.name first (has full registry prefix)
+			if n, ok := manifest.Annotations["io.containerd.image.name"].(string); ok {
+				name = n
+			} else if n, ok := manifest.Annotations["org.opencontainers.image.ref.name"].(string); ok {
+				name = n
+			}
+		}
+
+		if name == "" {
+			continue // Skip if we can't determine the name
+		}
+
+		// Determine content type from name
+		contentType := "file"
+		if strings.Contains(name, ":") {
+			contentType = "image"
+		} else if strings.HasSuffix(name, ".tgz") || strings.HasSuffix(name, ".tar.gz") {
+			contentType = "chart"
+		}
+
+		_, err = db.ExecContext(ctx, `
+			INSERT OR REPLACE INTO store_contents (content_type, name, digest, source_haul)
+			VALUES (?, ?, ?, ?)
+		`, contentType, name, manifest.Digest, haulFilename)
+
+		if err != nil {
+			log.Printf("Error inserting store content %s: %v", name, err)
+		}
+	}
+
+	log.Printf("Tracked %d items from haul %s", len(index.Manifests), haulFilename)
+	return nil
+}
+
+// rescanStore scans the store and rebuilds the store_contents table
+func (h *Handler) rescanStore(ctx context.Context) (int, error) {
+	storeDir := h.Cfg.HaulerStoreDir
+	if storeDir == "" {
+		storeDir = filepath.Join(h.Cfg.DataDir, "store")
+	}
+
+	// Clear existing store_contents
+	db := h.JobRunner.DB()
+	if _, err := db.ExecContext(ctx, "DELETE FROM store_contents"); err != nil {
+		return 0, fmt.Errorf("clearing store_contents: %w", err)
+	}
+
+	// Scan blobs directory to discover content
+	blobsDir := filepath.Join(storeDir, "blobs", "sha256")
+	entries, err := os.ReadDir(blobsDir)
+	if err != nil {
+		return 0, fmt.Errorf("reading blobs directory: %w", err)
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		// Just count the blobs
+		count++
+	}
+
+	// Parse index.json to get proper item names
+	indexPath := filepath.Join(storeDir, "index.json")
+	indexData, err := os.ReadFile(indexPath)
+	if err != nil {
+		return count, fmt.Errorf("reading index.json: %w", err)
+	}
+
+	var index struct {
+		Manifests []struct {
+			Name        string                 `json:"name"`
+			Annotations map[string]interface{} `json:"annotations"`
+		} `json:"manifests"`
+	}
+	if err := json.Unmarshal(indexData, &index); err != nil {
+		return count, fmt.Errorf("parsing index.json: %w", err)
+	}
+
+	// Insert discovered items
+	for _, manifest := range index.Manifests {
+		contentType := "file"
+		if strings.Contains(manifest.Name, ":") {
+			contentType = "image"
+		} else if strings.HasSuffix(manifest.Name, ".tgz") || strings.HasSuffix(manifest.Name, ".tar.gz") {
+			contentType = "chart"
+		}
+
+		var digest string
+		if manifest.Annotations != nil {
+			if d, ok := manifest.Annotations["vnd.docker.reference.digest"].(string); ok {
+				digest = d
+			}
+		}
+
+		_, err = db.ExecContext(ctx, `
+			INSERT OR IGNORE INTO store_contents (content_type, name, digest, source_haul, loaded_at)
+			VALUES (?, ?, ?, NULL, datetime('now'))
+		`, contentType, manifest.Name, digest)
+
+		if err != nil {
+			log.Printf("Error inserting store content %s: %v", manifest.Name, err)
+		} else {
+			count++
+		}
+	}
+
+	log.Printf("Rescan complete: tracked %d items", count)
+	return count, nil
+}
+
+// Rescan handles POST /api/store/rescan
+func (h *Handler) Rescan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	count, err := h.rescanStore(r.Context())
+	if err != nil {
+		log.Printf("Error rescanning store: %v", err)
+		http.Error(w, "Failed to rescan store: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"itemsFound": count,
+		"message":   fmt.Sprintf("Store rescanned, tracked %d items", count),
+	})
+}
+
 // RegisterRoutes registers the store routes with the given mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/store/info", h.GetInfo)
 	mux.HandleFunc("/api/store/add-image", h.AddImage)
 	mux.HandleFunc("/api/store/add-chart", h.AddChart)
 	mux.HandleFunc("/api/store/add-file", h.AddFile)
@@ -973,5 +1523,94 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/store/extract", h.Extract)
 	mux.HandleFunc("/api/store/copy", h.Copy)
 	mux.HandleFunc("/api/store/remove", h.Remove)
+	mux.HandleFunc("/api/store/rescan", h.Rescan)
+	mux.HandleFunc("/api/store/hauls", h.ListHauls)
+	mux.HandleFunc("/api/store/hauls/upload", h.UploadHaul)
+	mux.HandleFunc("/api/store/hauls/", h.DeleteHaul)
 	mux.HandleFunc("/api/downloads/", h.ServeDownload)
+}
+
+// UploadHaul handles POST /api/store/hauls/upload
+// Accepts a .tar.zst file upload and saves it to the data directory
+func (h *Handler) UploadHaul(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse multipart form (max 100GB)
+	if err := r.ParseMultipartForm(100 << 30); err != nil {
+		log.Printf("Error parsing multipart form: %v", err)
+		http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+		return
+	}
+
+	// Get the file from form
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("Error getting file from form: %v", err)
+		http.Error(w, "No file provided or error reading file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	filename := header.Filename
+
+	// Validate filename has .tar.zst extension
+	if !strings.HasSuffix(strings.ToLower(filename), ".tar.zst") {
+		http.Error(w, "Only .tar.zst files are allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Security: ensure filename doesn't contain path traversal
+	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
+	}
+
+	// Ensure data directory exists
+	dataDir := h.Cfg.DataDir
+	if dataDir == "" {
+		dataDir = "."
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Printf("Error creating data directory: %v", err)
+		http.Error(w, "Failed to create data directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Build the destination path
+	destinationPath := filepath.Join(dataDir, filename)
+
+	// Create the destination file
+	destFile, err := os.OpenFile(destinationPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		if os.IsExist(err) {
+			http.Error(w, "A file with this name already exists", http.StatusConflict)
+		} else {
+			log.Printf("Error creating destination file: %v", err)
+			http.Error(w, "Failed to create file", http.StatusInternalServerError)
+		}
+		return
+	}
+	defer destFile.Close()
+
+	// Copy the uploaded file to destination
+	written, err := io.Copy(destFile, file)
+	if err != nil {
+		log.Printf("Error copying file: %v", err)
+		os.Remove(destinationPath)
+		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Uploaded haul archive: %s (%d bytes)", filename, written)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":  "File uploaded successfully",
+		"filename": filename,
+		"size":     written,
+	})
 }

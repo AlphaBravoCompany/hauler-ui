@@ -22,10 +22,11 @@ import (
 
 // Handler handles HTTP requests for serve operations
 type Handler struct {
-	cfg       *config.Config
-	db        *sql.DB
-	processes map[int]*managedProcess
-	mu        sync.RWMutex
+	cfg         *config.Config
+	db          *sql.DB
+	processes   map[int]*managedProcess
+	certManager *CertManager
+	mu          sync.RWMutex
 }
 
 type managedProcess struct {
@@ -39,9 +40,10 @@ type managedProcess struct {
 // NewHandler creates a new serve handler
 func NewHandler(cfg *config.Config, db *sql.DB) *Handler {
 	return &Handler{
-		cfg:       cfg,
-		db:        db,
-		processes: make(map[int]*managedProcess),
+		cfg:         cfg,
+		db:          db,
+		processes:   make(map[int]*managedProcess),
+		certManager: NewCertManager(cfg.DataDir),
 	}
 }
 
@@ -51,6 +53,7 @@ type ServeRegistryRequest struct {
 	Readonly   bool   `json:"readonly,omitempty"`
 	TLSCert    string `json:"tlsCert,omitempty"`
 	TLSKey     string `json:"tlsKey,omitempty"`
+	AutoTLS    bool   `json:"autoTls,omitempty"`
 	Directory  string `json:"directory,omitempty"`
 	ConfigFile string `json:"configFile,omitempty"`
 }
@@ -61,6 +64,7 @@ type ServeFileserverRequest struct {
 	Timeout   int    `json:"timeout,omitempty"`
 	TLSCert   string `json:"tlsCert,omitempty"`
 	TLSKey    string `json:"tlsKey,omitempty"`
+	AutoTLS   bool   `json:"autoTls,omitempty"`
 	Directory string `json:"directory,omitempty"`
 }
 
@@ -93,14 +97,26 @@ func (h *Handler) ServeRegistry(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--read-only=true")
 	}
 
-	// Optional TLS cert
-	if req.TLSCert != "" {
-		args = append(args, "--tls-cert", req.TLSCert)
-	}
+	// Handle TLS configuration
+	if req.AutoTLS {
+		serveType := "registry"
+		certPath, keyPath, err := h.certManager.GetOrGenerateCert(serveType)
+		if err != nil {
+			log.Printf("Error generating TLS certificate: %v", err)
+			http.Error(w, fmt.Sprintf("Failed to generate certificate: %v", err), http.StatusInternalServerError)
+			return
+		}
+		args = append(args, "--tls-cert", certPath, "--tls-key", keyPath)
+	} else {
+		// Optional TLS cert
+		if req.TLSCert != "" {
+			args = append(args, "--tls-cert", req.TLSCert)
+		}
 
-	// Optional TLS key
-	if req.TLSKey != "" {
-		args = append(args, "--tls-key", req.TLSKey)
+		// Optional TLS key
+		if req.TLSKey != "" {
+			args = append(args, "--tls-key", req.TLSKey)
+		}
 	}
 
 	// Optional directory
@@ -448,14 +464,26 @@ func (h *Handler) ServeFileserver(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--timeout", strconv.Itoa(req.Timeout))
 	}
 
-	// Optional TLS cert
-	if req.TLSCert != "" {
-		args = append(args, "--tls-cert", req.TLSCert)
-	}
+	// Handle TLS configuration
+	if req.AutoTLS {
+		serveType := "fileserver"
+		certPath, keyPath, err := h.certManager.GetOrGenerateCert(serveType)
+		if err != nil {
+			log.Printf("Error generating TLS certificate: %v", err)
+			http.Error(w, fmt.Sprintf("Failed to generate certificate: %v", err), http.StatusInternalServerError)
+			return
+		}
+		args = append(args, "--tls-cert", certPath, "--tls-key", keyPath)
+	} else {
+		// Optional TLS cert
+		if req.TLSCert != "" {
+			args = append(args, "--tls-cert", req.TLSCert)
+		}
 
-	// Optional TLS key
-	if req.TLSKey != "" {
-		args = append(args, "--tls-key", req.TLSKey)
+		// Optional TLS key
+		if req.TLSKey != "" {
+			args = append(args, "--tls-key", req.TLSKey)
+		}
 	}
 
 	// Optional directory

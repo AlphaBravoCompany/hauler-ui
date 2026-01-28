@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, NavLink } from 'react-router-dom'
 import { useJobs } from '../App.jsx'
+import { AlertTriangle, X, Download, Check, AlertCircle } from 'lucide-react'
 
 function StoreLoad() {
   const { fetchJobs } = useJobs()
@@ -9,8 +10,12 @@ function StoreLoad() {
   // Multiple filenames list (for -f flag)
   const [fileList, setFileList] = useState(['haul.tar.zst'])
 
+  // Clear store option
+  const [clearStore, setClearStore] = useState(false)
+
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const handleAddFile = () => {
     setFileList([...fileList, ''])
@@ -34,6 +39,18 @@ function StoreLoad() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
+
+    // Show confirmation if clearing store
+    if (clearStore) {
+      setShowConfirm(true)
+      return
+    }
+
+    await doLoad()
+  }
+
+  const doLoad = async () => {
+    setShowConfirm(false)
     setSubmitting(true)
 
     try {
@@ -46,7 +63,8 @@ function StoreLoad() {
       }
 
       const requestPayload = {
-        filenames: validFiles
+        filenames: validFiles,
+        clear: clearStore
       }
 
       const res = await fetch('/api/store/load', {
@@ -90,8 +108,9 @@ function StoreLoad() {
 
       {/* Warning banner for Docker/Podman tarballs */}
       <div className="card" style={{ borderColor: 'var(--accent-amber)', marginBottom: '1rem' }}>
-        <div className="card-title" style={{ color: 'var(--accent-amber)' }}>
-          ⚠ Archive Format Support
+        <div className="card-title" style={{ color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertTriangle size={18} />
+          Archive Format Support
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
           <p style={{ marginBottom: '0.5rem' }}>
@@ -136,7 +155,7 @@ function StoreLoad() {
                         disabled={submitting}
                         style={{ color: 'var(--accent-red)' }}
                       >
-                        ✕
+                        <X size={16} />
                       </button>
                     )}
                   </div>
@@ -150,6 +169,23 @@ function StoreLoad() {
                   + Add Another File
                 </button>
               </div>
+
+              {/* Clear Store Option */}
+              <div className="form-group" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={clearStore}
+                    onChange={(e) => setClearStore(e.target.checked)}
+                    disabled={submitting}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 500 }}>Clear store before loading</span>
+                </label>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                  Remove all existing content from the store before loading archives. Useful for loading a single haul.
+                </div>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -159,7 +195,12 @@ function StoreLoad() {
               disabled={submitting || fileList.filter(f => f.trim()).length === 0}
               style={{ fontSize: '1rem', padding: '0.75rem 1.5rem' }}
             >
-              {submitting ? 'Starting Load...' : '📥 Load Archives'}
+              {submitting ? 'Starting Load...' : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Download size={18} />
+                  Load Archives{clearStore ? ' (with Clear)' : ''}
+                </span>
+              )}
             </button>
           </form>
         </div>
@@ -176,30 +217,37 @@ function StoreLoad() {
                 Use this to restore content from archives created with the
                 <strong> Store Save</strong> operation.
               </p>
+              <p>
+                <strong>Provenance Tracking:</strong> When you load a haul, the system tracks which
+                archive each item came from. View this on the <NavLink to="/store/contents" style={{ color: 'var(--accent-amber)' }}>Store Contents</NavLink> page.
+              </p>
             </div>
           </div>
 
           <div className="card help-panel" style={{ marginTop: '1rem' }}>
             <div className="card-title">Supported Formats</div>
             <div style={{ fontSize: '0.8rem', lineHeight: '1.7' }}>
-              <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: 'var(--accent-green)' }}>✓ Hauler Archives (.tar.zst)</strong>
+              <p style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Check size={16} style={{ color: 'var(--accent-green)' }} />
+                <strong style={{ color: 'var(--accent-green)' }}>Hauler Archives (.tar.zst)</strong>
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0, marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0, marginBottom: '0.75rem', marginLeft: '1.5rem' }}>
                 Archives created with <code>hauler store save</code>
               </p>
 
-              <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: 'var(--accent-green)' }}>✓ Docker Tarballs (v1.3+)</strong>
+              <p style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Check size={16} style={{ color: 'var(--accent-green)' }} />
+                <strong style={{ color: 'var(--accent-green)' }}>Docker Tarballs (v1.3+)</strong>
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0, marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0, marginBottom: '0.75rem', marginLeft: '1.5rem' }}>
                 Archives created with <code>docker save</code>
               </p>
 
-              <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: 'var(--accent-red)' }}>✗ Podman Tarballs</strong>
+              <p style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <X size={16} style={{ color: 'var(--accent-red)' }} />
+                <strong style={{ color: 'var(--accent-red)' }}>Podman Tarballs</strong>
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0 }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 0, marginLeft: '1.5rem' }}>
                 Not currently supported
               </p>
             </div>
@@ -221,6 +269,39 @@ function StoreLoad() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="modal-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <AlertCircle size={24} style={{ color: 'var(--accent-amber)' }} />
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Clear Store?</h2>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              This will <strong>remove all existing content</strong> from the store before loading the archive(s).
+              This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                className="btn"
+                onClick={() => setShowConfirm(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={doLoad}
+                disabled={submitting}
+                style={{ backgroundColor: 'var(--accent-amber)', color: 'var(--bg-primary)' }}
+              >
+                {submitting ? 'Clearing & Loading...' : 'Clear & Load'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
