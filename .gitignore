@@ -43,5 +43,7 @@ Thumbs.db
 *_COVERAGE*.md
 
 # Ralph-tui
-.ralph-tui/iterations/
-.ralph-tui/*.log
+.ralph-tui/
+
+# PRD files
+prd.json
