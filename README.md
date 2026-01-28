@@ -6,6 +6,8 @@
 
 A beginner-friendly web interface for [Rancher Government Hauler](https://github.com/rancherfederal/hauler) — the airgap content orchestration tool.
 
+**NOTE**: This project is in ALPHA while we test it. We will release a stable version in the coming weeks.
+
 ## Overview
 
 Hauler UI is a **single-container web application** that provides full operational parity with the Hauler CLI. It wraps the power of Hauler's command-line interface in an intuitive graphical experience, making airgap operations accessible to users of all skill levels.
