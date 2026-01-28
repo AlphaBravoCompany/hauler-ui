@@ -2,10 +2,14 @@ services:
   hauler-ui:
     build: ..
     ports:
-      - "8080:8080"   # Main UI
-      - "5000:5000"   # Registry serve
-      - "5001:5001"   # Fileserver serve
+      - "${PORT:-8080}:8080"   # Main UI
+      - "5000:5000"            # Registry serve
+      - "5001:5001"            # Fileserver serve
     volumes:
       - ./data:/data
     environment:
-      - PORT=8080
+      - PORT=${PORT:-8080}
+      - HAULER_UI_PASSWORD=${HAULER_UI_PASSWORD:-}
+      - HAULER_LOG_LEVEL=${HAULER_LOG_LEVEL:-info}
+      - HAULER_IGNORE_ERRORS=${HAULER_IGNORE_ERRORS:-false}
+      - HAULER_RETRIES=${HAULER_RETRIES:-3}
