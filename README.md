@@ -1,5 +1,9 @@
 # Hauler UI by AlphaBravo
 
+<p align="center">
+  <img src="assets/ui-screenshot-1.png" alt="Hauler UI Screenshot" width="600">
+</p>
+
 A beginner-friendly web interface for [Rancher Government Hauler](https://github.com/rancherfederal/hauler) — the airgap content orchestration tool.
 
 ## Overview
