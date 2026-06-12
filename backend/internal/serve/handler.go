@@ -131,11 +131,11 @@ func (h *Handler) ServeRegistry(w http.ResponseWriter, r *http.Request) {
 		req.Directory = filepath.Join(filepath.Dir(haul.StoreDir), "registry")
 	}
 
-	// Readonly flag (default true)
-	if !req.Readonly {
-		args = append(args, "--read-only=false")
+	// Readonly flag (hauler default is true)
+	if req.Readonly {
+		args = append(args, "--readonly")
 	} else {
-		args = append(args, "--read-only=true")
+		args = append(args, "--readonly=false")
 	}
 
 	// Handle TLS configuration

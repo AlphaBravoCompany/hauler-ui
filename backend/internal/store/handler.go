@@ -152,6 +152,7 @@ func (h *Handler) AddImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tagJobHaul(r.Context(), job.ID, haul.ID)
+	go h.trackAfterJob(job.ID, haul)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -269,6 +270,7 @@ func (h *Handler) AddChart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tagJobHaul(r.Context(), job.ID, haul.ID)
+	go h.trackAfterJob(job.ID, haul)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -361,6 +363,7 @@ func (h *Handler) AddFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tagJobHaul(r.Context(), job.ID, haul.ID)
+	go h.trackAfterJob(job.ID, haul)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -510,6 +513,7 @@ func (h *Handler) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tagJobHaul(r.Context(), job.ID, haul.ID)
+	go h.trackAfterJob(job.ID, haul)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -962,6 +966,7 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.tagJobHaul(r.Context(), job.ID, haul.ID)
+	go h.rescanAfterJob(job.ID, haul)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -1176,15 +1181,23 @@ func (h *Handler) clearStore(storeDir string) error {
 	return nil
 }
 
-// trackStoreContents adds entries to store_contents table for items loaded into a haul
-func (h *Handler) trackStoreContents(ctx context.Context, haul *hauls.Haul, sourceArchive string) error {
-	storeDir := haul.StoreDir
+// storeItem is a single artifact discovered in a haul's store index.
+type storeItem struct {
+	ContentType string
+	Name        string
+	Digest      string
+}
 
-	// Parse the index.json to discover what's in the store
-	indexPath := filepath.Join(storeDir, "index.json")
-	indexData, err := os.ReadFile(indexPath)
+// readStoreItems parses a haul store's index.json into a list of artifacts,
+// deriving each item's name from its OCI annotations (the index manifests have
+// no top-level name field). Returns an empty slice for a fresh/empty store.
+func readStoreItems(storeDir string) ([]storeItem, error) {
+	indexData, err := os.ReadFile(filepath.Join(storeDir, "index.json"))
 	if err != nil {
-		return fmt.Errorf("reading index.json: %w", err)
+		if os.IsNotExist(err) {
+			return nil, nil // fresh store, nothing tracked yet
+		}
+		return nil, fmt.Errorf("reading index.json: %w", err)
 	}
 
 	var index struct {
@@ -1194,122 +1207,133 @@ func (h *Handler) trackStoreContents(ctx context.Context, haul *hauls.Haul, sour
 		} `json:"manifests"`
 	}
 	if err := json.Unmarshal(indexData, &index); err != nil {
-		return fmt.Errorf("parsing index.json: %w", err)
+		return nil, fmt.Errorf("parsing index.json: %w", err)
 	}
 
-	// Insert items into store_contents
-	db := h.JobRunner.DB()
-	for _, manifest := range index.Manifests {
-		// Get name from annotations - prefer io.containerd.image.name (full reference)
-		// over org.opencontainers.image.ref.name (short reference)
+	items := make([]storeItem, 0, len(index.Manifests))
+	for _, m := range index.Manifests {
+		// Prefer io.containerd.image.name (full reference) over the short ref name.
 		var name string
-		if manifest.Annotations != nil {
-			// Try io.containerd.image.name first (has full registry prefix)
-			if n, ok := manifest.Annotations["io.containerd.image.name"].(string); ok {
+		if m.Annotations != nil {
+			if n, ok := m.Annotations["io.containerd.image.name"].(string); ok {
 				name = n
-			} else if n, ok := manifest.Annotations["org.opencontainers.image.ref.name"].(string); ok {
+			} else if n, ok := m.Annotations["org.opencontainers.image.ref.name"].(string); ok {
 				name = n
 			}
 		}
-
 		if name == "" {
-			continue // Skip if we can't determine the name
+			continue
 		}
 
-		// Determine content type from name
 		contentType := "file"
 		if strings.Contains(name, ":") {
 			contentType = "image"
 		} else if strings.HasSuffix(name, ".tgz") || strings.HasSuffix(name, ".tar.gz") {
 			contentType = "chart"
 		}
+		items = append(items, storeItem{ContentType: contentType, Name: name, Digest: m.Digest})
+	}
+	return items, nil
+}
 
-		_, err = db.ExecContext(ctx, `
-			INSERT OR REPLACE INTO store_contents (haul_id, content_type, name, digest, source_haul)
-			VALUES (?, ?, ?, ?, ?)
-		`, haul.ID, contentType, name, manifest.Digest, sourceArchive)
-
-		if err != nil {
-			log.Printf("Error inserting store content %s: %v", name, err)
-		}
+// trackStoreContents records the artifacts currently in a haul's store. Existing
+// rows are preserved (INSERT OR IGNORE) so provenance from prior loads is not
+// clobbered by later direct adds; sourceArchive is recorded for newly seen items.
+func (h *Handler) trackStoreContents(ctx context.Context, haul *hauls.Haul, sourceArchive string) error {
+	items, err := readStoreItems(haul.StoreDir)
+	if err != nil {
+		return err
 	}
 
-	log.Printf("Tracked %d items from archive %s into haul %d", len(index.Manifests), sourceArchive, haul.ID)
+	var source interface{}
+	if sourceArchive != "" {
+		source = sourceArchive
+	}
+
+	db := h.JobRunner.DB()
+	for _, it := range items {
+		if _, err := db.ExecContext(ctx, `
+			INSERT OR IGNORE INTO store_contents (haul_id, content_type, name, digest, source_haul)
+			VALUES (?, ?, ?, ?, ?)
+		`, haul.ID, it.ContentType, it.Name, it.Digest, source); err != nil {
+			log.Printf("Error inserting store content %s: %v", it.Name, err)
+		}
+	}
+	log.Printf("Tracked %d items into haul %d (source=%q)", len(items), haul.ID, sourceArchive)
 	return nil
 }
 
-// rescanStore scans a haul's store and rebuilds its store_contents rows
-func (h *Handler) rescanStore(ctx context.Context, haul *hauls.Haul) (int, error) {
-	storeDir := haul.StoreDir
+// trackAfterJob waits for a store-modifying job to finish, then records the
+// haul's current contents so summary counts and the contents view stay accurate.
+func (h *Handler) trackAfterJob(jobID int64, haul *hauls.Haul) {
+	ctx := context.Background()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for range ticker.C {
+		j, err := h.JobRunner.GetJob(ctx, jobID)
+		if err != nil {
+			return
+		}
+		switch j.Status {
+		case jobrunner.StatusSucceeded:
+			if err := h.trackStoreContents(ctx, haul, ""); err != nil {
+				log.Printf("Warning: failed to track contents for haul %d: %v", haul.ID, err)
+			}
+			return
+		case jobrunner.StatusFailed:
+			return
+		}
+	}
+}
 
-	// Clear existing store_contents for this haul
+// rescanAfterJob waits for a job (e.g. remove) to finish, then fully rebuilds the
+// haul's tracked contents so deletions are reflected in the counts.
+func (h *Handler) rescanAfterJob(jobID int64, haul *hauls.Haul) {
+	ctx := context.Background()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for range ticker.C {
+		j, err := h.JobRunner.GetJob(ctx, jobID)
+		if err != nil {
+			return
+		}
+		switch j.Status {
+		case jobrunner.StatusSucceeded:
+			if _, err := h.rescanStore(ctx, haul); err != nil {
+				log.Printf("Warning: failed to rescan haul %d: %v", haul.ID, err)
+			}
+			return
+		case jobrunner.StatusFailed:
+			return
+		}
+	}
+}
+
+// rescanStore rebuilds a haul's store_contents rows from scratch (used after
+// removals and by the manual Rescan endpoint). Source provenance is reset.
+func (h *Handler) rescanStore(ctx context.Context, haul *hauls.Haul) (int, error) {
+	items, err := readStoreItems(haul.StoreDir)
+	if err != nil {
+		return 0, err
+	}
+
 	db := h.JobRunner.DB()
 	if _, err := db.ExecContext(ctx, "DELETE FROM store_contents WHERE haul_id = ?", haul.ID); err != nil {
 		return 0, fmt.Errorf("clearing store_contents: %w", err)
 	}
 
-	// Scan blobs directory to discover content
-	blobsDir := filepath.Join(storeDir, "blobs", "sha256")
-	entries, err := os.ReadDir(blobsDir)
-	if err != nil {
-		return 0, fmt.Errorf("reading blobs directory: %w", err)
-	}
-
 	count := 0
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		// Just count the blobs
-		count++
-	}
-
-	// Parse index.json to get proper item names
-	indexPath := filepath.Join(storeDir, "index.json")
-	indexData, err := os.ReadFile(indexPath)
-	if err != nil {
-		return count, fmt.Errorf("reading index.json: %w", err)
-	}
-
-	var index struct {
-		Manifests []struct {
-			Name        string                 `json:"name"`
-			Annotations map[string]interface{} `json:"annotations"`
-		} `json:"manifests"`
-	}
-	if err := json.Unmarshal(indexData, &index); err != nil {
-		return count, fmt.Errorf("parsing index.json: %w", err)
-	}
-
-	// Insert discovered items
-	for _, manifest := range index.Manifests {
-		contentType := "file"
-		if strings.Contains(manifest.Name, ":") {
-			contentType = "image"
-		} else if strings.HasSuffix(manifest.Name, ".tgz") || strings.HasSuffix(manifest.Name, ".tar.gz") {
-			contentType = "chart"
-		}
-
-		var digest string
-		if manifest.Annotations != nil {
-			if d, ok := manifest.Annotations["vnd.docker.reference.digest"].(string); ok {
-				digest = d
-			}
-		}
-
-		_, err = db.ExecContext(ctx, `
+	for _, it := range items {
+		if _, err := db.ExecContext(ctx, `
 			INSERT OR IGNORE INTO store_contents (haul_id, content_type, name, digest, source_haul, loaded_at)
 			VALUES (?, ?, ?, ?, NULL, datetime('now'))
-		`, haul.ID, contentType, manifest.Name, digest)
-
-		if err != nil {
-			log.Printf("Error inserting store content %s: %v", manifest.Name, err)
+		`, haul.ID, it.ContentType, it.Name, it.Digest); err != nil {
+			log.Printf("Error inserting store content %s: %v", it.Name, err)
 		} else {
 			count++
 		}
 	}
-
-	log.Printf("Rescan complete: tracked %d items", count)
+	log.Printf("Rescan complete for haul %d: tracked %d items", haul.ID, count)
 	return count, nil
 }
 
