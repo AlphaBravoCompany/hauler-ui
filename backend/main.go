@@ -14,6 +14,7 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/hauls"
 	"github.com/hauler-ui/hauler-ui/backend/internal/jobrunner"
 	"github.com/hauler-ui/hauler-ui/backend/internal/manifests"
+	"github.com/hauler-ui/hauler-ui/backend/internal/publish"
 	"github.com/hauler-ui/hauler-ui/backend/internal/registry"
 	"github.com/hauler-ui/hauler-ui/backend/internal/serve"
 	"github.com/hauler-ui/hauler-ui/backend/internal/settings"
@@ -77,7 +78,7 @@ func main() {
 	defer db.Close()
 	log.Printf("Database initialized: %s", cfg.DatabasePath)
 
-		// Initialize job runner
+	// Initialize job runner
 	jobRunner := jobrunner.New(db.DB)
 	jobHandler := jobrunner.NewHandler(jobRunner, cfg)
 
@@ -109,6 +110,11 @@ func main() {
 
 	// Initialize serve handler
 	serveHandler := serve.NewHandler(cfg, db.DB, haulService)
+
+	// Initialize publish manager (host-routed registries + path-routed files)
+	publishManager := publish.NewManager(cfg, db.DB, haulService)
+	publishHandler := publish.NewHandler(publishManager, haulService)
+	publishManager.RestoreOnBoot(context.Background())
 
 	// Initialize settings handler
 	settingsHandler := settings.NewHandler(db.DB)
@@ -142,6 +148,9 @@ func main() {
 
 	// Serve endpoints
 	serveHandler.RegisterRoutes(mux)
+
+	// Publish endpoints (routes table, publish/unpublish) and /h/ file serving
+	publishHandler.RegisterRoutes(mux)
 
 	// Settings endpoints
 	settingsHandler.RegisterRoutes(mux)
@@ -213,6 +222,11 @@ func main() {
 		Handler:     handlerWithAuth,
 		ReadTimeout: 5 * time.Second,
 	}
+
+	// Start the single host-routed registry proxy listener for published hauls.
+	// Runs unauthenticated (registry clients use their own auth), on its own port.
+	registryAddr := ":" + getEnv("HAULER_UI_REGISTRY_PORT", "5000")
+	go publishManager.StartRegistryListener(registryAddr)
 
 	log.Println("Server starting on :8080")
 	if err := server.ListenAndServe(); err != nil {

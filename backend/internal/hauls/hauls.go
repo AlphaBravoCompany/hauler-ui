@@ -116,6 +116,14 @@ func (s *Service) Get(ctx context.Context, id int64) (*Haul, error) {
 	return scanHaul(row)
 }
 
+// GetBySlug returns a single haul by its filesystem-safe slug.
+func (s *Service) GetBySlug(ctx context.Context, slug string) (*Haul, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT id, name, slug, description, store_dir, created_at, updated_at
+		 FROM hauls WHERE slug = ?`, slug)
+	return scanHaul(row)
+}
+
 // Create makes a new haul, initializing its store directory as an empty OCI layout.
 func (s *Service) Create(ctx context.Context, name, description string) (*Haul, error) {
 	name = strings.TrimSpace(name)

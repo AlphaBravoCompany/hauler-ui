@@ -22,9 +22,9 @@ const (
 
 // Manager handles authentication operations
 type Manager struct {
-	db        *sql.DB
-	password  string
-	enabled   bool
+	db       *sql.DB
+	password string
+	enabled  bool
 }
 
 // NewManager creates a new auth manager
@@ -159,6 +159,7 @@ func isPublicPath(path string) bool {
 		"/api/auth/login",
 		"/healthz",
 		"/api/config",
+		"/h/", // published haul files are served to air-gap consumers without a UI session
 	}
 
 	for _, p := range publicPaths {
