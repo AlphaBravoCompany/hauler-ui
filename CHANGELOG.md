@@ -24,6 +24,13 @@ and archived side by side without clearing or merging a shared store.
   isolated backend directories, and are guarded against port collisions.
 - **New UI** — a Hauls list and a tabbed haul workspace (Overview, Contents,
   Add Content, Archives, Serve) with an active-haul switcher in the top bar.
+- **Per-haul manifest library** — saved manifests are owned by a haul; names are
+  unique per haul and the Manifests page is scoped to the active haul.
+- **Live haul stats** — the Hauls list and switcher poll so item and archive
+  counts stay current after operations complete.
+- **Clearer paths** — the Store page and Settings now show the active haul's
+  isolated store directory and the per-haul hauls root instead of a single
+  global store path.
 
 ## [0.1.0-alpha] - 2025-01-28
 

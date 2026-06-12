@@ -1,6 +1,7 @@
 package manifests
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hauler-ui/hauler-ui/backend/internal/hauls"
 )
 
 const (
@@ -18,17 +21,32 @@ const (
 
 // Handler handles HTTP requests for manifest operations
 type Handler struct {
-	db *sql.DB
+	db    *sql.DB
+	hauls *hauls.Service
 }
 
 // NewHandler creates a new manifests handler
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *sql.DB, haulSvc *hauls.Service) *Handler {
+	return &Handler{db: db, hauls: haulSvc}
+}
+
+// resolveHaulID returns the haul a manifest request targets, defaulting to the
+// default haul when none is supplied.
+func (h *Handler) resolveHaulID(ctx context.Context, haulID int64) (int64, error) {
+	if haulID > 0 {
+		return haulID, nil
+	}
+	haul, err := h.hauls.EnsureDefault(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return haul.ID, nil
 }
 
 // Manifest represents a saved manifest
 type Manifest struct {
 	ID          int64     `json:"id"`
+	HaulID      int64     `json:"haulId"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	YAMLContent string    `json:"yamlContent"`
@@ -39,6 +57,7 @@ type Manifest struct {
 
 // CreateManifestRequest represents the request to create a manifest
 type CreateManifestRequest struct {
+	HaulID      int64    `json:"haulId"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	YAMLContent string   `json:"yamlContent"`
@@ -60,11 +79,18 @@ func (h *Handler) ListManifests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	haulID, err := h.resolveHaulID(r.Context(), parseHaulQuery(r))
+	if err != nil {
+		http.Error(w, "Failed to resolve haul: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	rows, err := h.db.Query(`
-		SELECT id, name, description, yaml_content, tags, created_at, updated_at
+		SELECT id, haul_id, name, description, yaml_content, tags, created_at, updated_at
 		FROM saved_manifests
+		WHERE haul_id = ?
 		ORDER BY updated_at DESC
-	`)
+	`, haulID)
 	if err != nil {
 		log.Printf("Error querying manifests: %v", err)
 		http.Error(w, "Failed to query manifests", http.StatusInternalServerError)
@@ -76,11 +102,13 @@ func (h *Handler) ListManifests(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m Manifest
 		var tagsJSON sql.NullString
-		err := rows.Scan(&m.ID, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
+		var hid sql.NullInt64
+		err := rows.Scan(&m.ID, &hid, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
 		if err != nil {
 			log.Printf("Error scanning manifest row: %v", err)
 			continue
 		}
+		m.HaulID = hid.Int64
 
 		// Parse tags JSON
 		if tagsJSON.Valid && tagsJSON.String != "" {
@@ -110,14 +138,7 @@ func (h *Handler) GetManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var m Manifest
-	var tagsJSON sql.NullString
-	err = h.db.QueryRow(`
-		SELECT id, name, description, yaml_content, tags, created_at, updated_at
-		FROM saved_manifests
-		WHERE id = ?
-	`, id).Scan(&m.ID, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
-
+	m, err := h.getManifestByID(id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Manifest not found", http.StatusNotFound)
 		return
@@ -126,14 +147,6 @@ func (h *Handler) GetManifest(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error querying manifest: %v", err)
 		http.Error(w, "Failed to query manifest", http.StatusInternalServerError)
 		return
-	}
-
-	// Parse tags JSON
-	if tagsJSON.Valid && tagsJSON.String != "" {
-		json.Unmarshal([]byte(tagsJSON.String), &m.Tags)
-	}
-	if m.Tags == nil {
-		m.Tags = []string{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -169,6 +182,12 @@ func (h *Handler) CreateManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	haulID, err := h.resolveHaulID(r.Context(), req.HaulID)
+	if err != nil {
+		http.Error(w, "Failed to resolve haul: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Encode tags as JSON
 	tagsJSON := "[]"
 	if len(req.Tags) > 0 {
@@ -178,19 +197,19 @@ func (h *Handler) CreateManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check if name already exists
+	// Check if name already exists within this haul
 	var existingID int64
-	err := h.db.QueryRow("SELECT id FROM saved_manifests WHERE name = ?", req.Name).Scan(&existingID)
+	err = h.db.QueryRow("SELECT id FROM saved_manifests WHERE haul_id = ? AND name = ?", haulID, req.Name).Scan(&existingID)
 	if err == nil {
-		http.Error(w, "A manifest with this name already exists", http.StatusConflict)
+		http.Error(w, "A manifest with this name already exists in this haul", http.StatusConflict)
 		return
 	}
 
 	// Insert manifest
 	result, err := h.db.Exec(`
-		INSERT INTO saved_manifests (name, description, yaml_content, tags)
-		VALUES (?, ?, ?, ?)
-	`, req.Name, req.Description, req.YAMLContent, tagsJSON)
+		INSERT INTO saved_manifests (haul_id, name, description, yaml_content, tags)
+		VALUES (?, ?, ?, ?, ?)
+	`, haulID, req.Name, req.Description, req.YAMLContent, tagsJSON)
 
 	if err != nil {
 		log.Printf("Error creating manifest: %v", err)
@@ -252,11 +271,15 @@ func (h *Handler) UpdateManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check for duplicate name (if name changed)
+	// Check for duplicate name within the same haul (if name changed)
 	var existingID int64
-	err = h.db.QueryRow("SELECT id FROM saved_manifests WHERE name = ? AND id != ?", req.Name, id).Scan(&existingID)
+	err = h.db.QueryRow(`
+		SELECT id FROM saved_manifests
+		WHERE name = ? AND id != ?
+		  AND haul_id IS (SELECT haul_id FROM saved_manifests WHERE id = ?)
+	`, req.Name, id, id).Scan(&existingID)
 	if err == nil {
-		http.Error(w, "A manifest with this name already exists", http.StatusConflict)
+		http.Error(w, "A manifest with this name already exists in this haul", http.StatusConflict)
 		return
 	}
 
@@ -332,14 +355,7 @@ func (h *Handler) DownloadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var m Manifest
-	var tagsJSON sql.NullString
-	err = h.db.QueryRow(`
-		SELECT id, name, description, yaml_content, tags, created_at, updated_at
-		FROM saved_manifests
-		WHERE id = ?
-	`, id).Scan(&m.ID, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
-
+	m, err := h.getManifestByID(id)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Manifest not found", http.StatusNotFound)
 		return
@@ -362,15 +378,17 @@ func (h *Handler) DownloadManifest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getManifestByID(id int64) (*Manifest, error) {
 	var m Manifest
 	var tagsJSON sql.NullString
+	var hid sql.NullInt64
 	err := h.db.QueryRow(`
-		SELECT id, name, description, yaml_content, tags, created_at, updated_at
+		SELECT id, haul_id, name, description, yaml_content, tags, created_at, updated_at
 		FROM saved_manifests
 		WHERE id = ?
-	`, id).Scan(&m.ID, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
+	`, id).Scan(&m.ID, &hid, &m.Name, &m.Description, &m.YAMLContent, &tagsJSON, &m.CreatedAt, &m.UpdatedAt)
 
 	if err != nil {
 		return nil, err
 	}
+	m.HaulID = hid.Int64
 
 	if tagsJSON.Valid && tagsJSON.String != "" {
 		json.Unmarshal([]byte(tagsJSON.String), &m.Tags)
@@ -380,6 +398,12 @@ func (h *Handler) getManifestByID(id int64) (*Manifest, error) {
 	}
 
 	return &m, nil
+}
+
+// parseHaulQuery reads the optional ?haul= query parameter.
+func parseHaulQuery(r *http.Request) int64 {
+	id, _ := strconv.ParseInt(r.URL.Query().Get("haul"), 10, 64)
+	return id
 }
 
 // extractID extracts the manifest ID from the request URL path

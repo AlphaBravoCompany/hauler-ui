@@ -344,6 +344,7 @@ function Dashboard() {
 }
 
 function Store() {
+  const { activeHaul } = useHauls()
   const [config, setConfig] = useState(null)
   const [error, setError] = useState(null)
 
@@ -382,7 +383,10 @@ function Store() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Store</h1>
-          <p className="page-subtitle">Overview of your container store and available operations</p>
+          <p className="page-subtitle">
+            Operations run against {activeHaul ? <strong style={{ color: 'var(--accent-amber)' }}>{activeHaul.name}</strong> : 'the active haul'}
+            {' '}— switch hauls from the top bar
+          </p>
         </div>
       </div>
 
@@ -400,12 +404,12 @@ function Store() {
           <table className="data-table">
             <tbody>
               <tr>
-                <td style={{ width: '180px' }}>Store Directory</td>
+                <td style={{ width: '180px' }}>Active Haul Store</td>
                 <td className="primary">
-                  <code>{config.haulerStoreDir || '-'}</code>
+                  <code>{activeHaul?.storeDir || '-'}</code>
                 </td>
                 <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {config.haulerStoreEnv || 'HAULER_STORE_DIR'}
+                  per-haul (isolated)
                 </td>
               </tr>
               <tr>
@@ -2174,12 +2178,12 @@ function Settings() {
           <table className="data-table">
             <tbody>
               <tr>
-                <td style={{ width: '150px' }}>Store Directory</td>
+                <td style={{ width: '150px' }}>Hauls Directory</td>
                 <td className="primary">
-                  <code>{config.haulerStoreDir || '-'}</code>
+                  <code>{config.haulerDir ? `${config.haulerDir}/hauls` : '-'}</code>
                 </td>
                 <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {config.haulerStoreEnv || 'HAULER_STORE_DIR'}
+                  one isolated store per haul
                 </td>
               </tr>
               <tr>

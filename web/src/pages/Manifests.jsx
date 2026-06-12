@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import * as yaml from 'js-yaml'
 import { X, AlertTriangle, Search, Clipboard, RefreshCw, Edit, Trash2, Download } from 'lucide-react'
 import { useModal } from '../components/Modal.jsx'
+import { useHauls } from '../contexts/HaulContext.jsx'
 
 // Manifest templates based on hauler content.hauler.cattle.io/v1
 const MANIFEST_TEMPLATES = {
@@ -51,6 +52,7 @@ items:
 
 function Manifests() {
   const { confirm } = useModal()
+  const { activeHaul } = useHauls()
   const [manifests, setManifests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -69,7 +71,8 @@ function Manifests() {
 
   const fetchManifests = async () => {
     try {
-      const res = await fetch('/api/manifests')
+      const haulQuery = activeHaul ? `?haul=${activeHaul.id}` : ''
+      const res = await fetch(`/api/manifests${haulQuery}`)
       if (res.ok) {
         const data = await res.json()
         setManifests(data)
@@ -84,8 +87,10 @@ function Manifests() {
   }
 
   useEffect(() => {
+    setLoading(true)
     fetchManifests()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHaul?.id])
 
   const handleCreateNew = () => {
     setEditingManifest(null)
@@ -181,6 +186,7 @@ function Manifests() {
       .filter(t => t.length > 0)
 
     const payload = {
+      haulId: activeHaul?.id,
       name: name.trim(),
       description: description.trim(),
       yamlContent: yamlContent.trim(),
@@ -268,7 +274,9 @@ function Manifests() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Manifests</h1>
-          <p className="page-subtitle">Create and manage hauler manifests</p>
+          <p className="page-subtitle">
+            Manifest library for {activeHaul ? <strong style={{ color: 'var(--accent-amber)' }}>{activeHaul.name}</strong> : 'the active haul'}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={handleCreateNew}>
           + New Manifest

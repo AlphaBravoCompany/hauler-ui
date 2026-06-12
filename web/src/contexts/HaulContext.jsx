@@ -62,6 +62,9 @@ export function HaulProvider({ children }) {
 
   useEffect(() => {
     refreshHauls()
+    // Poll so item/archive counts stay current after operations complete.
+    const interval = setInterval(refreshHauls, 5000)
+    return () => clearInterval(interval)
   }, [refreshHauls])
 
   const createHaul = useCallback(async (name, description = '') => {

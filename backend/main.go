@@ -105,7 +105,7 @@ func main() {
 	storeHandler := store.NewHandler(jobRunner, cfg, haulService)
 
 	// Initialize manifests handler
-	manifestsHandler := manifests.NewHandler(db.DB)
+	manifestsHandler := manifests.NewHandler(db.DB, haulService)
 
 	// Initialize serve handler
 	serveHandler := serve.NewHandler(cfg, db.DB, haulService)
