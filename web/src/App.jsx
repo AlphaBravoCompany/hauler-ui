@@ -19,6 +19,7 @@ import Manifests from './pages/Manifests.jsx'
 import StoreContents from './pages/StoreContents.jsx'
 import Hauls from './pages/Hauls.jsx'
 import HaulDetail from './pages/HaulDetail.jsx'
+import Publishing from './pages/Publishing.jsx'
 import Login from './pages/Login.jsx'
 import { HaulProvider, useHauls } from './contexts/HaulContext.jsx'
 import { ChevronDown, Layers } from 'lucide-react'
@@ -229,6 +230,7 @@ function Sidebar() {
     {
       title: 'Operations',
       items: [
+        { path: '/publish', label: 'Publishing' },
         { path: '/serve', label: 'Serve' },
         { path: '/registry', label: 'Registry Login' }
       ]
@@ -1927,6 +1929,7 @@ function App() {
                           <Route path="/hauls" element={<Hauls />} />
                           <Route path="/hauls/:id" element={<HaulDetail />} />
                           <Route path="/serve" element={<Serve />} />
+                          <Route path="/publish" element={<Publishing />} />
                           <Route path="/registry" element={<RegistryLogin />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/jobs" element={<JobHistory />} />

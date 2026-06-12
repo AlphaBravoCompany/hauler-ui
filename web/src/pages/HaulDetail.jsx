@@ -96,7 +96,7 @@ function HaulDetail() {
       {tab === 'contents' && <StoreContents />}
       {tab === 'add' && <AddTab />}
       {tab === 'archives' && <ArchivesTab haul={haul} onChanged={refreshHauls} />}
-      {tab === 'serve' && <ServeTab />}
+      {tab === 'serve' && <ServeTab haul={haul} />}
     </div>
   )
 }
@@ -175,18 +175,158 @@ function AddTab() {
   )
 }
 
-function ServeTab() {
+function CodeBlock({ children }) {
   return (
-    <div className="card">
-      <div className="card-title">Serve this Haul</div>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-        Start an embedded registry or fileserver backed by this haul&apos;s store. Each running haul must use a
-        distinct port. Servers you start here are bound to this haul.
-      </p>
-      <NavLink to="/serve" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>
-        <Globe size={16} style={{ marginRight: '0.3rem' }} /> Open Serve Controls
-      </NavLink>
-    </div>
+    <pre style={{
+      margin: '0.4rem 0 0', padding: '0.6rem 0.75rem', background: 'var(--bg-primary)',
+      border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.78rem',
+      overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+    }}>{children}</pre>
+  )
+}
+
+function ServeTab({ haul }) {
+  const [pub, setPub] = useState(null)        // { routes, registryDomain, registryPort }
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const [hostname, setHostname] = useState('')
+
+  const fetchPublish = useCallback(async () => {
+    try {
+      const res = await fetch('/api/publish')
+      if (res.ok) setPub(await res.json())
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { fetchPublish() }, [fetchPublish])
+
+  const route = pub?.routes?.find((r) => r.haulId === haul.id)
+  const published = !!route
+
+  const handlePublish = async () => {
+    setBusy(true); setError(null)
+    try {
+      const res = await fetch(`/api/publish/${haul.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostname: hostname.trim() || undefined }),
+      })
+      if (!res.ok) throw new Error((await res.text()) || 'Publish failed')
+      await fetchPublish()
+    } catch (err) { setError(err.message) } finally { setBusy(false) }
+  }
+
+  const handleUnpublish = async () => {
+    setBusy(true); setError(null)
+    try {
+      const res = await fetch(`/api/publish/${haul.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.text()) || 'Unpublish failed')
+      await fetchPublish()
+    } catch (err) { setError(err.message) } finally { setBusy(false) }
+  }
+
+  const regPort = pub?.registryPort || 5000
+  const portSuffix = regPort === 443 ? '' : `:${regPort}`
+  const fileBase = `${window.location.origin}/h/${haul.slug}`
+
+  return (
+    <>
+      {error && (
+        <div className="card" style={{ borderColor: 'var(--accent-red)', marginBottom: '1rem' }}>
+          <div className="card-title" style={{ color: 'var(--accent-red)' }}>Error</div>
+          <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+        </div>
+      )}
+
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <div className="card-title" style={{ border: 'none', margin: 0 }}>Publish this Haul</div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+              Expose this haul&apos;s registry through hauler-ui&apos;s single front door (one port, host-routed),
+              and serve its files at a stable URL — no per-haul ports to manage.
+            </p>
+          </div>
+          {published ? (
+            <span className="badge badge-success" style={{ alignSelf: 'flex-start' }}>Published</span>
+          ) : (
+            <span className="badge" style={{ alignSelf: 'flex-start' }}>Not published</span>
+          )}
+        </div>
+
+        {!published ? (
+          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ marginBottom: 0, flex: 1, minWidth: '240px' }}>
+              <label className="form-label">Registry hostname (optional)</label>
+              <input
+                className="form-input"
+                placeholder={pub?.registryDomain ? `${haul.slug}.${pub.registryDomain}` : haul.slug}
+                value={hostname}
+                onChange={(e) => setHostname(e.target.value)}
+                disabled={busy}
+              />
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                Clients pull from this host. Leave blank to use the default
+                {pub?.registryDomain ? ` (<slug>.${pub.registryDomain})` : ' (the slug)'}.
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={handlePublish} disabled={busy}>
+              <Globe size={15} style={{ marginRight: '0.3rem' }} />
+              {busy ? 'Publishing…' : 'Publish'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: '1rem' }}>
+            <table className="data-table" style={{ marginBottom: '0.75rem' }}>
+              <tbody>
+                <tr><td style={{ width: '160px' }}>Registry host</td><td className="primary"><code>{route.hostname}</code></td></tr>
+                <tr><td>Registry port</td><td><code>{regPort}</code> (shared by all published hauls)</td></tr>
+                <tr><td>Internal backend</td><td style={{ color: 'var(--text-muted)' }}>127.0.0.1:{route.port} (hauler process)</td></tr>
+              </tbody>
+            </table>
+            <button className="btn" onClick={handleUnpublish} disabled={busy} style={{ color: 'var(--accent-red)' }}>
+              {busy ? 'Unpublishing…' : 'Unpublish'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {published && (
+        <div className="card">
+          <div className="card-title">Client Configuration</div>
+
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pull an image (Docker / nerdctl):</div>
+          <CodeBlock>docker pull {route.hostname}{portSuffix}/&lt;repo&gt;:&lt;tag&gt;</CodeBlock>
+
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.85rem' }}>containerd mirror — /etc/containerd/certs.d/{route.hostname}{portSuffix}/hosts.toml:</div>
+          <CodeBlock>{`server = "https://${route.hostname}${portSuffix}"
+
+[host."https://${route.hostname}${portSuffix}"]
+  capabilities = ["pull", "resolve"]`}</CodeBlock>
+
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.85rem' }}>Download a file from this haul:</div>
+          <CodeBlock>{`curl -O ${fileBase}/<filename>
+# list:  curl ${fileBase}/`}</CodeBlock>
+
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', marginBottom: 0 }}>
+            The registry is served over HTTPS. With the default self-signed certificate, clients must trust it
+            (or use insecure mode); load a CA-signed cert on the{' '}
+            <NavLink to="/publish" style={{ color: 'var(--accent-amber)' }}>Publishing</NavLink> page for valid TLS.
+            Requires DNS (or <code>/etc/hosts</code>) pointing <code>{route.hostname}</code> at this server.
+          </p>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-title">Ad-hoc Serve</div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: 0 }}>
+          Prefer a one-off registry/fileserver on a specific port? Use the manual serve controls.
+        </p>
+        <NavLink to="/serve" className="btn">
+          <Globe size={16} style={{ marginRight: '0.3rem' }} /> Open Serve Controls
+        </NavLink>
+      </div>
+    </>
   )
 }
 

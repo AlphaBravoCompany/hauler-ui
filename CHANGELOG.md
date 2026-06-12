@@ -4,6 +4,32 @@ All notable changes to Hauler UI will be documented in this file.
 
 ## [Unreleased]
 
+### Added — Multi-haul serving (Publish layer)
+
+Expose many hauls through hauler-ui's single front door instead of one port per
+haul.
+
+- **Publish a haul** (`POST /api/publish/{id}`): starts a read-only internal
+  registry for that haul and registers a virtual host. A single host-routed
+  reverse proxy (one port, default `:5000`) routes registry traffic to the right
+  haul by `Host` header, so many hauls share one registry endpoint. Published
+  state survives restarts.
+- **Direct file serving** at `GET /h/<slug>/` (listing) and `/h/<slug>/<name>`
+  (download), straight from each haul's store — no subprocess, public so air-gap
+  consumers can `curl` them.
+- **Registry TLS**: the registry endpoint is HTTPS. Load a CA-signed cert via
+  `HAULER_UI_REGISTRY_TLS_CERT/KEY` or the Publishing page
+  (`POST /api/publish/tls`); it takes effect with no restart. A self-signed
+  wildcard is used until then.
+- **UI**: a Publishing page (routes table + TLS management + client snippets)
+  and Publish controls on each haul's Serve tab.
+- Config: `HAULER_UI_REGISTRY_PORT` (default 5000),
+  `HAULER_UI_REGISTRY_DOMAIN` (subdomain routing), `HAULER_UI_REGISTRY_TLS_CERT`
+  / `_KEY`.
+
+> Note: each published haul currently runs one `hauler store serve registry`
+> subprocess; files are served in-process. See `docs/multi-haul-serving.md`.
+
 ### Changed — Multi-haul workspaces
 
 Reworked the core model so a **haul** is now a first-class, isolated workspace

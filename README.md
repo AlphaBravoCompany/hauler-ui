@@ -131,6 +131,10 @@ Hauler UI is configured via environment variables:
 | `HAULER_TEMP_DIR` | `/data/tmp` | Temporary files directory |
 | `DOCKER_CONFIG` | `/data/.docker` | Docker auth config directory |
 | `DATABASE_PATH` | `/data/app.db` | SQLite database path |
+| `HAULER_UI_REGISTRY_PORT` | `5000` | Single host-routed port for published haul registries |
+| `HAULER_UI_REGISTRY_DOMAIN` | (none) | Base domain for `<slug>.<domain>` registry routing |
+| `HAULER_UI_REGISTRY_TLS_CERT` | (none) | Path to a TLS cert (e.g. wildcard) for the registry endpoint |
+| `HAULER_UI_REGISTRY_TLS_KEY` | (none) | Path to the TLS private key for the registry endpoint |
 
 > **Source of truth**: See `deploy/.env.example` for the complete list of documented environment variables.
 

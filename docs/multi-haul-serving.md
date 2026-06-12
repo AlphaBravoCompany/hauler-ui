@@ -1,8 +1,28 @@
 # Design: Multi-Haul Serving (Publish Layer)
 
-**Status:** Proposed
+**Status:** Implemented — host-routed registry proxy, direct file serving, and
+TLS are live (`internal/publish`). The single-process registry in "Process
+model" below remains a future option.
 **Audience:** hauler-ui maintainers
 **Related:** isolated per-haul stores (`/data/hauls/<slug>/store`)
+
+## Process model & footprint
+
+Today, **each published haul runs one `hauler store serve registry`
+subprocess**, bound to a private `127.0.0.1` ephemeral port; hauler-ui
+reverse-proxies to it by Host header. So **N published hauls = N hauler
+processes**. This reuses hauler's own registry implementation rather than
+reimplementing the OCI distribution API, at the cost of a process (and a small
+warm-up + memory) per published haul. **Files do not spawn anything** — they are
+served directly from the store by hauler-ui.
+
+If the process-per-haul footprint becomes a concern, the future option is a
+**single in-process read-only OCI registry** inside hauler-ui that serves every
+haul from its store directory and host-routes internally — one process, no
+subprocesses. That is more code (implement `/v2/` manifests + blobs against the
+OCI layout) but eliminates the fan-out. The current host-routed proxy is
+forward-compatible: swapping the per-haul backend for an in-process handler does
+not change the client-facing contract.
 
 ## Problem
 
