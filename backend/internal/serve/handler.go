@@ -52,6 +52,26 @@ func NewHandler(cfg *config.Config, db *sql.DB, haulSvc *hauls.Service) *Handler
 	}
 }
 
+// StopAll terminates every managed ad-hoc serve process (used on graceful
+// shutdown) so no hauler children are orphaned.
+func (h *Handler) StopAll() {
+	h.mu.RLock()
+	procs := make([]*managedProcess, 0, len(h.processes))
+	for _, p := range h.processes {
+		procs = append(procs, p)
+	}
+	h.mu.RUnlock()
+
+	for _, p := range procs {
+		if p.Process != nil {
+			_ = p.Process.Signal(syscall.SIGTERM)
+		}
+	}
+	if len(procs) > 0 {
+		log.Printf("serve: sent SIGTERM to %d serve process(es)", len(procs))
+	}
+}
+
 // resolveHaul returns the haul to serve, defaulting to the default haul.
 func (h *Handler) resolveHaul(ctx context.Context, haulID int64) (*hauls.Haul, error) {
 	if haulID > 0 {
