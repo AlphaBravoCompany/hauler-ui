@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/hauler-ui/hauler-ui/backend/internal/auth"
@@ -22,12 +26,25 @@ import (
 	"github.com/hauler-ui/hauler-ui/backend/internal/store"
 )
 
-// startJobProcessor starts a background goroutine that processes queued jobs
+// maxConcurrentJobs caps how many jobs run at once so a burst of queued
+// operations does not exhaust memory/disk on a single-instance deployment.
+func maxConcurrentJobs() int {
+	if v := os.Getenv("HAULER_UI_MAX_CONCURRENT_JOBS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 2
+}
+
+// startJobProcessor starts a background goroutine that processes queued jobs,
+// honoring a concurrency limit.
 func startJobProcessor(runner *jobrunner.Runner, stopCh <-chan struct{}) {
 	ctx := context.Background()
+	limit := maxConcurrentJobs()
 
 	go func() {
-		log.Println("Job processor goroutine started")
+		log.Printf("Job processor goroutine started (max concurrent: %d)", limit)
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -37,34 +54,53 @@ func startJobProcessor(runner *jobrunner.Runner, stopCh <-chan struct{}) {
 				log.Println("Job processor stopped")
 				return
 			case <-ticker.C:
-				// Look for queued jobs
 				jobs, err := runner.ListJobs(ctx, nil)
 				if err != nil {
 					log.Printf("Error listing jobs: %v", err)
 					continue
 				}
 
-				log.Printf("Job processor: found %d total jobs", len(jobs))
-
-				// Start any queued jobs
-				startedCount := 0
+				// Count what is already running and only fill up to the limit.
+				running := 0
 				for _, job := range jobs {
+					if job.Status == jobrunner.StatusRunning {
+						running++
+					}
+				}
+
+				for _, job := range jobs {
+					if running >= limit {
+						break
+					}
 					if job.Status == jobrunner.StatusQueued {
 						log.Printf("Starting queued job #%d: %s %v", job.ID, job.Command, job.Args)
 						if err := runner.Start(ctx, job.ID); err != nil {
 							log.Printf("Error starting job #%d: %v", job.ID, err)
 						} else {
-							startedCount++
+							running++
 						}
 					}
-				}
-				if startedCount > 0 {
-					log.Printf("Started %d jobs", startedCount)
 				}
 			}
 		}
 	}()
 	log.Println("Job processor started")
+}
+
+// cleanupOnBoot resets state left over from a previous run: jobs stuck in
+// "running" (the process died mid-job) are marked failed, and stale serve
+// process rows (dead PIDs) are marked stopped so the UI reflects reality.
+func cleanupOnBoot(db *sql.DB) {
+	if res, err := db.Exec(`UPDATE jobs SET status = 'failed', completed_at = CURRENT_TIMESTAMP WHERE status = 'running'`); err == nil {
+		if n, _ := res.RowsAffected(); n > 0 {
+			log.Printf("Boot cleanup: marked %d interrupted job(s) as failed", n)
+		}
+	}
+	if res, err := db.Exec(`UPDATE serve_processes SET status = 'stopped', stopped_at = CURRENT_TIMESTAMP WHERE status = 'running'`); err == nil {
+		if n, _ := res.RowsAffected(); n > 0 {
+			log.Printf("Boot cleanup: marked %d stale serve process(es) as stopped", n)
+		}
+	}
 }
 
 func main() {
@@ -77,6 +113,9 @@ func main() {
 	}
 	defer db.Close()
 	log.Printf("Database initialized: %s", cfg.DatabasePath)
+
+	// Reset state left over from a previous run before anything starts.
+	cleanupOnBoot(db.DB)
 
 	// Initialize job runner
 	jobRunner := jobrunner.New(db.DB)
@@ -228,10 +267,30 @@ func main() {
 	registryAddr := ":" + getEnv("HAULER_UI_REGISTRY_PORT", "5000")
 	go publishManager.StartRegistryListener(registryAddr)
 
-	log.Println("Server starting on :8080")
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	// Run the UI/API server until a termination signal arrives.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		log.Println("Server starting on :8080")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutdown signal received; stopping...")
+
+	// Stop spawned hauler children so they are not orphaned, then drain HTTP.
+	publishManager.StopAll()
+	serveHandler.StopAll()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown error: %v", err)
 	}
+	log.Println("Shutdown complete")
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
